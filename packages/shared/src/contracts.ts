@@ -65,6 +65,7 @@ export interface Artifact {
   step_id?: string;
   chat_id?: ID;
   name: string;
+  hash?: string;
   path: string;
   media_type?: string;
   size_bytes?: number;

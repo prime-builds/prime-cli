@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
   step_id TEXT,
   chat_id TEXT,
   name TEXT NOT NULL,
+  hash TEXT,
   path TEXT NOT NULL,
   media_type TEXT,
   size_bytes INTEGER,
