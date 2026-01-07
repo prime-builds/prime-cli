@@ -1,0 +1,20 @@
+{
+  "name": "prime-cli",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "engine:headless": "tsx packages/engine/src/index.ts",
+    "test:engine": "tsx --test packages/engine/test/engine.test.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.12.0",
+    "better-sqlite3": "^9.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
