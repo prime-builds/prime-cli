@@ -47,6 +47,7 @@ export interface ExecutionResult {
 export interface AdapterExecutionContext {
   project_root: string;
   artifacts_dir: string;
+  evidence_dir?: string;
   run_id?: string;
   step_id?: string;
   signal?: AbortSignal;
