@@ -36,20 +36,38 @@ export class RunManager {
     project_id: string;
     chat_id?: string;
     workflow: WorkflowDefinition;
+    workflowJson?: string;
+    parent_run_id?: string;
+    forked_from_step_id?: string;
+    replay_of_run_id?: string;
+    planner_prompt_version?: string;
+    critic_prompt_version?: string;
+    planner_latency_ms?: number;
+    tokens_estimate?: number;
+    initialEvents?: (run: Run) => RunEvent[];
   }): Run {
     const startedAt = nowIso();
     const run = this.repos.runs.create({
       project_id: input.project_id,
       chat_id: input.chat_id,
       workflow_id: input.workflow.workflow_id,
+      workflow_json: input.workflowJson ?? JSON.stringify(input.workflow),
       status: "running",
-      started_at: startedAt
+      started_at: startedAt,
+      parent_run_id: input.parent_run_id ?? null,
+      forked_from_step_id: input.forked_from_step_id ?? null,
+      replay_of_run_id: input.replay_of_run_id ?? null,
+      planner_prompt_version: input.planner_prompt_version ?? null,
+      critic_prompt_version: input.critic_prompt_version ?? null,
+      planner_latency_ms: input.planner_latency_ms ?? null,
+      tokens_estimate: input.tokens_estimate ?? null
     });
 
     const controller = new AbortController();
+    const initialEvents = input.initialEvents?.(run) ?? [];
     const promise = new Promise<void>((resolve) => {
       setImmediate(() => {
-        this.executeRun(run, input.workflow, controller.signal)
+        this.executeRun(run, input.workflow, controller.signal, initialEvents)
           .catch(() => undefined)
           .finally(() => resolve());
       });
@@ -93,7 +111,8 @@ export class RunManager {
   private async executeRun(
     run: Run,
     workflow: WorkflowDefinition,
-    signal: AbortSignal
+    signal: AbortSignal,
+    initialEvents: RunEvent[]
   ): Promise<void> {
     try {
       if (signal.aborted) {
@@ -106,6 +125,10 @@ export class RunManager {
         workflow_id: run.workflow_id,
         timestamp: nowIso()
       });
+
+      for (const event of initialEvents) {
+        this.emit(event);
+      }
 
       for (const step of workflow.steps) {
         if (signal.aborted) {
@@ -233,6 +256,7 @@ export class RunManager {
   }
 
   private emit(event: RunEvent): void {
+    this.repos.runEvents.append(event);
     this.events.emit(event);
   }
 }

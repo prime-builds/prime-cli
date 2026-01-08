@@ -1,4 +1,4 @@
-import type { ChatMessageInput } from "../../shared/src/contracts";
+import type { ChatMessageInput, MissionManifest } from "../../shared/src/contracts";
 import type { AdapterRegistry } from "./adapters/registry";
 import { Logger } from "./logger";
 import { PromptLoader } from "./prompts/loader";
@@ -20,6 +20,7 @@ export class Planner {
     project_id: string;
     chat_id?: string;
     message: ChatMessageInput;
+    mission: MissionManifest;
   }): WorkflowDefinition {
     const plannerPrompt = this.prompts.loadPlannerPrompt();
     const criticPrompt = this.prompts.loadCriticPrompt();
@@ -34,6 +35,7 @@ export class Planner {
         workflow_id: newId(),
         project_id: input.project_id,
         chat_id: input.chat_id,
+        scope: { targets: input.mission.scope_targets },
         steps: []
       };
     }
@@ -43,13 +45,20 @@ export class Planner {
       workflow_id: newId(),
       project_id: input.project_id,
       chat_id: input.chat_id,
+      scope: { targets: input.mission.scope_targets },
       steps: [
         {
           id: "step-1",
           adapter: adapter.id,
           category: "dry-run",
           risk: "low",
-          inputs: { message: input.message.content },
+          inputs: {
+            message: input.message.content,
+            mission: {
+              objective: input.mission.objective,
+              scope_targets: input.mission.scope_targets
+            }
+          },
           outputs: {},
           limits: {},
           params: {}

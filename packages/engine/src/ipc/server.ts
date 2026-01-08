@@ -53,6 +53,10 @@ export class EngineIpcServer {
         return this.engine.listProjects(request.params);
       case "project.open":
         return this.engine.openProject(request.params);
+      case "mission.get":
+        return this.engine.getMission(request.params);
+      case "mission.set":
+        return this.engine.setMission(request.params);
       case "chat.create":
         return this.engine.createChat(request.params);
       case "chat.list":
@@ -63,12 +67,18 @@ export class EngineIpcServer {
         return this.engine.startRun(request.params);
       case "run.cancel":
         return this.engine.cancelRun(request.params);
+      case "run.fork":
+        return this.engine.forkRun(request.params);
+      case "run.replay":
+        return this.engine.replayRun(request.params);
       case "run.events":
         return this.subscribeToRunEvents(request.params.run_id);
       case "artifact.list":
         return this.engine.listArtifacts(request.params);
       case "artifact.open":
         return this.engine.openArtifact(request.params);
+      case "artifact.update":
+        return this.engine.updateArtifact(request.params);
       default:
         throw new EngineError("UNKNOWN_METHOD", `Unknown method: ${request.method}`);
     }
