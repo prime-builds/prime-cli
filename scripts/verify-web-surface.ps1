@@ -56,7 +56,12 @@ New-Item -ItemType Directory -Force -Path $projectRoot, $siteRoot, $artifactsDir
 </html>
 '@ | Set-Content (Join-Path $siteRoot "index.html") -Encoding utf8
 
-@'<!doctype html><html><body>About</body></html>'@ | Set-Content (Join-Path $siteRoot "about.html") -Encoding utf8
+@'
+<!doctype html>
+<html>
+  <body>About</body>
+</html>
+'@ | Set-Content (Join-Path $siteRoot "about.html") -Encoding utf8
 "console.log('app');" | Set-Content (Join-Path $siteRoot "app.js") -Encoding utf8
 "PNG" | Set-Content (Join-Path $siteRoot "logo.png") -Encoding utf8
 
