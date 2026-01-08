@@ -33,7 +33,10 @@ function createTestAdapter(id: string): AdapterDefinition {
   };
   return {
     manifest,
-    execute: async () => ({ logs: [], artifacts: [] }),
+    execute: async () => ({
+      logs: [{ level: "info", message: "ok" }],
+      artifacts: [{ type: "output.json", content_json: { ok: true } }]
+    }),
     runtime: createAdapterRuntime(manifest),
     source: { kind: "builtin", path: "test" }
   };
@@ -92,10 +95,10 @@ test("mission manifest is created and planner uses it", async () => {
     .get(run.id) as { workflow_json: string };
   const workflow = JSON.parse(row.workflow_json) as {
     scope: { targets: string[] };
-    steps: Array<{ inputs: { mission: { objective: string } } }>;
+    steps: Array<unknown>;
   };
   assert.deepEqual(workflow.scope.targets, ["docs"]);
-  assert.equal(workflow.steps[0].inputs.mission.objective, "Summarize the repository");
+  assert.equal(workflow.steps.length, 0);
   db.close();
 
   await engine.stop();
@@ -121,9 +124,30 @@ test("artifact editing updates file, db, and emits event", async () => {
     root_path: "/tmp/project"
   });
   const { chat } = await engine.createChat({ project_id: project.id, title: "Chat" });
-  const { run } = await engine.sendMessage({
+  const workflow = {
+    workflow_id: "workflow-artifact-edit",
+    project_id: project.id,
     chat_id: chat.id,
-    message: { role: "user", content: "Generate artifact" }
+    scope: { targets: [] as string[] },
+    steps: [
+      {
+        id: "step-1",
+        adapter: "dry-run-adapter",
+        category: "test",
+        risk: "low",
+        inputs: {},
+        outputs: { "output.json": {} },
+        limits: {},
+        params: {}
+      }
+    ]
+  };
+
+  const { run } = await engine.startRun({
+    project_id: project.id,
+    chat_id: chat.id,
+    workflow_id: workflow.workflow_id,
+    inputs: { workflow }
   });
 
   await engine.waitForRun(run.id);
@@ -224,7 +248,7 @@ test("fork and replay preserve lineage, artifacts, and audit events", async () =
     .all(forked.new_run_id) as Array<{ name: string }>;
   assert.deepEqual(
     forkArtifacts.map((row) => row.name),
-    ["step-1-dry-run.json", "step-2-dry-run.json", "step-3-dry-run.json"]
+    ["step-1-output.json", "step-2-output.json", "step-3-output.json"]
   );
 
   const parentSteps = db
