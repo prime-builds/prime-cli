@@ -6,9 +6,38 @@ import { test } from "node:test";
 import Database from "better-sqlite3";
 import { Engine } from "../src/engine";
 import { StaticAdapterRegistry } from "../src/adapters/registry";
+import type { AdapterDefinition } from "../src/adapters/registry";
+import type { AdapterManifest } from "../../core/src/adapters";
+import { createAdapterRuntime } from "../../core/src/adapters";
 
 function createTempDir(label: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `prime-cli-${label}-`));
+}
+
+function createTestAdapter(id: string): AdapterDefinition {
+  const manifest: AdapterManifest = {
+    id,
+    name: "Dry Run Adapter",
+    description: "Test adapter",
+    category: "test",
+    risk_default: "passive",
+    version: "1.0.0",
+    inputs: [],
+    outputs: ["output.json"],
+    params_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+      required: []
+    }
+  };
+  return {
+    manifest,
+    execute: async () => ({ logs: [], artifacts: [] }),
+    runtime: createAdapterRuntime(manifest),
+    source: "builtin",
+    location: "test"
+  };
 }
 
 function openDb(dbPath: string): Database.Database {
@@ -32,9 +61,7 @@ test("mission manifest is created and planner uses it", async () => {
       logLevel: "error"
     },
     {
-      adapterRegistry: new StaticAdapterRegistry([
-        { id: "dry-run-adapter", name: "Dry Run" }
-      ])
+      adapterRegistry: new StaticAdapterRegistry([createTestAdapter("dry-run-adapter")])
     }
   );
   await engine.start();
@@ -85,9 +112,7 @@ test("artifact editing updates file, db, and emits event", async () => {
       logLevel: "error"
     },
     {
-      adapterRegistry: new StaticAdapterRegistry([
-        { id: "dry-run-adapter", name: "Dry Run" }
-      ])
+      adapterRegistry: new StaticAdapterRegistry([createTestAdapter("dry-run-adapter")])
     }
   );
   await engine.start();
@@ -138,9 +163,7 @@ test("fork and replay preserve lineage, artifacts, and audit events", async () =
       logLevel: "error"
     },
     {
-      adapterRegistry: new StaticAdapterRegistry([
-        { id: "dry-run-adapter", name: "Dry Run" }
-      ])
+      adapterRegistry: new StaticAdapterRegistry([createTestAdapter("dry-run-adapter")])
     }
   );
   await engine.start();
