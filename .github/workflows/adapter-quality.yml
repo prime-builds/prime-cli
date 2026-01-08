@@ -1,0 +1,25 @@
+name: Adapter Quality Gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  adapters:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - name: Install
+        run: npm ci
+      - name: Adapter conformance
+        run: npm run adapters:check
+      - name: Adapter tests
+        run: npm run adapters:test
+      - name: Engine tests
+        run: npm run test:engine
