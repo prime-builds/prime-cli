@@ -1,5 +1,6 @@
 import type { ChatMessageInput, MissionManifest } from "../../shared/src/contracts";
 import type { AdapterRegistry } from "./adapters/registry";
+import { buildAdapterSummaries } from "./adapters/summary";
 import { Logger } from "./logger";
 import { PromptLoader } from "./prompts/loader";
 import type { WorkflowDefinition } from "./run/workflow";
@@ -30,8 +31,13 @@ export class Planner {
       critic_bytes: criticPrompt.length
     });
 
-    const adapters = this.registry.listAdapters(input.project_root);
-    if (adapters.length === 0) {
+    const summaries = buildAdapterSummaries(
+      this.registry.listAdapters(input.project_root)
+    );
+    this.logger.debug("Planner adapter summaries built", {
+      count: summaries.length
+    });
+    if (summaries.length === 0) {
       return {
         workflow_id: newId(),
         project_id: input.project_id,
@@ -41,7 +47,7 @@ export class Planner {
       };
     }
 
-    const adapter = adapters[0];
+    const adapter = summaries[0];
     return {
       workflow_id: newId(),
       project_id: input.project_id,

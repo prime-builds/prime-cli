@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
-import type { AdapterArtifact, AdapterExecution, AdapterManifest } from "../../../../core/src/adapters";
+import type {
+  AdapterArtifact,
+  AdapterExecution,
+  AdapterManifest
+} from "../../../../core/src/adapters";
 import {
   createAdapterRuntime,
   isStrictParamsSchema,
@@ -9,17 +13,38 @@ import {
 import type { WorkflowStep } from "../../run/workflow";
 import { Logger } from "../../logger";
 
+export type AdapterSource = {
+  kind: "builtin" | "local";
+  path: string;
+};
+
+export type AdapterConflict = {
+  id: string;
+  winner: AdapterSource;
+  losers: AdapterSource[];
+};
+
+export type AdapterLoadError = {
+  source: AdapterSource;
+  error: string;
+};
+
+export type AdapterDiagnostics = {
+  loadErrors: AdapterLoadError[];
+  conflicts: AdapterConflict[];
+};
+
 export interface AdapterDefinition {
   manifest: AdapterManifest;
   execute: AdapterExecution["execute"];
   runtime: ReturnType<typeof createAdapterRuntime>;
-  source: "builtin" | "local";
-  location: string;
+  source: AdapterSource;
 }
 
 export interface AdapterRegistry {
   listAdapters(projectRoot?: string): AdapterManifest[];
   getAdapter(id: string, projectRoot?: string): AdapterDefinition | undefined;
+  getDiagnostics(): AdapterDiagnostics;
   validateStep(
     step: WorkflowStep,
     availableArtifacts: AdapterArtifact[],
@@ -45,9 +70,12 @@ type RegistryOptions = {
 export class FileSystemAdapterRegistry implements AdapterRegistry {
   private readonly builtinsDir: string;
   private readonly logger: Logger;
-  private readonly builtinCache = new Map<string, AdapterDefinition>();
-  private readonly localCache = new Map<string, Map<string, AdapterDefinition>>();
-  private readonly loadErrors = new Map<string, string>();
+  private builtinCache?: { adapters: AdapterDefinition[]; errors: AdapterLoadError[] };
+  private readonly localCache = new Map<
+    string,
+    { adapters: AdapterDefinition[]; errors: AdapterLoadError[] }
+  >();
+  private lastDiagnostics: AdapterDiagnostics = { loadErrors: [], conflicts: [] };
 
   constructor(options: RegistryOptions) {
     this.builtinsDir = options.builtinsDir;
@@ -62,6 +90,10 @@ export class FileSystemAdapterRegistry implements AdapterRegistry {
   getAdapter(id: string, projectRoot?: string): AdapterDefinition | undefined {
     const adapters = this.loadAll(projectRoot);
     return adapters.find((entry) => entry.manifest.id === id);
+  }
+
+  getDiagnostics(): AdapterDiagnostics {
+    return this.lastDiagnostics;
   }
 
   validateStep(
@@ -90,61 +122,63 @@ export class FileSystemAdapterRegistry implements AdapterRegistry {
     return adapter?.manifest;
   }
 
-  getLoadErrors(): Record<string, string> {
-    return Object.fromEntries(this.loadErrors.entries());
-  }
-
   private loadAll(projectRoot?: string): AdapterDefinition[] {
     const builtins = this.loadBuiltins();
-    const locals = projectRoot ? this.loadLocal(projectRoot) : [];
-    return [...locals, ...builtins];
+    const locals = projectRoot ? this.loadLocal(projectRoot) : { adapters: [], errors: [] };
+    const allAdapters = [...locals.adapters, ...builtins.adapters];
+    const resolved = resolveConflicts(allAdapters);
+    const diagnostics: AdapterDiagnostics = {
+      loadErrors: [...builtins.errors, ...locals.errors].sort((a, b) =>
+        a.source.path.localeCompare(b.source.path)
+      ),
+      conflicts: resolved.conflicts
+    };
+
+    this.lastDiagnostics = diagnostics;
+    logConflicts(this.logger, diagnostics.conflicts);
+
+    return resolved.adapters;
   }
 
-  private loadBuiltins(): AdapterDefinition[] {
-    if (this.builtinCache.size > 0) {
-      return [...this.builtinCache.values()];
+  private loadBuiltins(): { adapters: AdapterDefinition[]; errors: AdapterLoadError[] } {
+    if (this.builtinCache) {
+      return this.builtinCache;
     }
-    const adapters = this.loadAdaptersFromDir(this.builtinsDir, "builtin");
-    for (const adapter of adapters) {
-      this.builtinCache.set(adapter.manifest.id, adapter);
-    }
-    return adapters;
+    const result = this.loadAdaptersFromDir(this.builtinsDir, { kind: "builtin" });
+    this.builtinCache = result;
+    return result;
   }
 
-  private loadLocal(projectRoot: string): AdapterDefinition[] {
+  private loadLocal(projectRoot: string): { adapters: AdapterDefinition[]; errors: AdapterLoadError[] } {
     const normalized = path.resolve(projectRoot);
     const existing = this.localCache.get(normalized);
     if (existing) {
-      return [...existing.values()];
+      return existing;
     }
     const localDir = path.resolve(normalized, "local_adapters");
-    const adapters = fs.existsSync(localDir)
-      ? this.loadAdaptersFromDir(localDir, "local")
-      : [];
-    const cache = new Map<string, AdapterDefinition>();
-    for (const adapter of adapters) {
-      if (cache.has(adapter.manifest.id)) {
-        this.logger.warn("Duplicate local adapter id", { id: adapter.manifest.id });
-        continue;
-      }
-      cache.set(adapter.manifest.id, adapter);
-    }
-    this.localCache.set(normalized, cache);
-    return adapters;
+    const result = fs.existsSync(localDir)
+      ? this.loadAdaptersFromDir(localDir, { kind: "local" })
+      : { adapters: [], errors: [] };
+    this.localCache.set(normalized, result);
+    return result;
   }
 
-  private loadAdaptersFromDir(rootDir: string, source: "builtin" | "local"): AdapterDefinition[] {
+  private loadAdaptersFromDir(
+    rootDir: string,
+    source: Pick<AdapterSource, "kind">
+  ): { adapters: AdapterDefinition[]; errors: AdapterLoadError[] } {
     const dirs = findAdapterDirs(rootDir);
     const adapters: AdapterDefinition[] = [];
+    const errors: AdapterLoadError[] = [];
     for (const dir of dirs) {
-      const result = loadAdapterFromDir(dir, source, this.logger);
+      const result = loadAdapterFromDir(dir, { kind: source.kind, path: dir }, this.logger);
       if (result.adapter) {
         adapters.push(result.adapter);
       } else if (result.error) {
-        this.loadErrors.set(dir, result.error);
+        errors.push({ source: { kind: source.kind, path: dir }, error: result.error });
       }
     }
-    return adapters;
+    return { adapters, errors };
   }
 }
 
@@ -155,6 +189,10 @@ export class EmptyAdapterRegistry implements AdapterRegistry {
 
   getAdapter(): AdapterDefinition | undefined {
     return undefined;
+  }
+
+  getDiagnostics(): AdapterDiagnostics {
+    return { loadErrors: [], conflicts: [] };
   }
 
   validateStep(): { ok: boolean; errors: string[] } {
@@ -181,6 +219,10 @@ export class StaticAdapterRegistry implements AdapterRegistry {
     return this.adapters.find((adapter) => adapter.manifest.id === id);
   }
 
+  getDiagnostics(): AdapterDiagnostics {
+    return { loadErrors: [], conflicts: [] };
+  }
+
   validateStep(step: WorkflowStep, availableArtifacts: AdapterArtifact[]): { ok: boolean; errors: string[] } {
     const adapter = this.getAdapter(step.adapter);
     if (!adapter) {
@@ -203,7 +245,9 @@ function findAdapterDirs(rootDir: string): string[] {
   if (!fs.existsSync(rootDir)) {
     return [];
   }
-  const entries = fs.readdirSync(rootDir, { withFileTypes: true });
+  const entries = fs
+    .readdirSync(rootDir, { withFileTypes: true })
+    .sort((a, b) => a.name.localeCompare(b.name));
   const dirs: string[] = [];
   for (const entry of entries) {
     const fullPath = path.join(rootDir, entry.name);
@@ -238,7 +282,7 @@ function findFile(dir: string, base: string): string | null {
 
 function loadAdapterFromDir(
   dir: string,
-  source: "builtin" | "local",
+  source: AdapterSource,
   logger: Logger
 ): AdapterLoadResult {
   try {
@@ -276,8 +320,7 @@ function loadAdapterFromDir(
         manifest,
         execute,
         runtime,
-        source,
-        location: dir
+        source
       }
     };
   } catch (error) {
@@ -285,4 +328,61 @@ function loadAdapterFromDir(
     logger.warn("Failed to load adapter", { dir, error: message });
     return { error: message };
   }
+}
+
+function resolveConflicts(adapters: AdapterDefinition[]): {
+  adapters: AdapterDefinition[];
+  conflicts: AdapterConflict[];
+} {
+  const sorted = [...adapters].sort(compareAdapterPriority);
+  const winners = new Map<string, AdapterDefinition>();
+  const conflicts = new Map<
+    string,
+    { winner: AdapterDefinition; losers: AdapterDefinition[] }
+  >();
+
+  for (const adapter of sorted) {
+    const id = adapter.manifest.id;
+    const existing = winners.get(id);
+    if (!existing) {
+      winners.set(id, adapter);
+      continue;
+    }
+    const conflict = conflicts.get(id) ?? { winner: existing, losers: [] };
+    conflict.losers.push(adapter);
+    conflicts.set(id, conflict);
+  }
+
+  const conflictEntries = Array.from(conflicts.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([id, conflict]) => ({
+      id,
+      winner: conflict.winner.source,
+      losers: conflict.losers.map((loser) => loser.source)
+    }));
+
+  const unique = Array.from(winners.values()).sort((a, b) =>
+    a.manifest.id.localeCompare(b.manifest.id)
+  );
+
+  return { adapters: unique, conflicts: conflictEntries };
+}
+
+function compareAdapterPriority(a: AdapterDefinition, b: AdapterDefinition): number {
+  if (a.source.kind !== b.source.kind) {
+    return a.source.kind === "local" ? -1 : 1;
+  }
+  return a.source.path.localeCompare(b.source.path);
+}
+
+function logConflicts(logger: Logger, conflicts: AdapterConflict[]): void {
+  for (const conflict of conflicts) {
+    const winner = formatSource(conflict.winner);
+    const losers = conflict.losers.map(formatSource).join(",");
+    logger.warn(`Adapter conflict id=${conflict.id} winner=${winner} losers=${losers}`);
+  }
+}
+
+function formatSource(source: AdapterSource): string {
+  return `${source.kind}:${source.path}`;
 }

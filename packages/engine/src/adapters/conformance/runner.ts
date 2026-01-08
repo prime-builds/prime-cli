@@ -57,7 +57,7 @@ export async function runConformance(
         errors.push("missing inputs did not fail validation");
       }
 
-      const fixtureDir = path.join(runtimeResult.location, "fixtures");
+      const fixtureDir = path.join(runtimeResult.source.path, "fixtures");
       if (fs.existsSync(fixtureDir)) {
         try {
           const fixtures = loadFixtures(fixtureDir);
@@ -67,7 +67,7 @@ export async function runConformance(
             fixtures.params,
             fixtures.artifacts,
             {
-              project_root: runtimeResult.location,
+              project_root: runtimeResult.source.path,
               artifacts_dir: path.join(fixtureDir, "artifacts")
             }
           );

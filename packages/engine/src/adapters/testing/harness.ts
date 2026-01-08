@@ -53,11 +53,11 @@ export async function runAdapterWithFixtures(
   if (!adapter) {
     throw new Error(`Adapter not found: ${adapterId}`);
   }
-  const fixtureDir = path.join(adapter.location, "fixtures");
+  const fixtureDir = path.join(adapter.source.path, "fixtures");
   const { params, artifacts, expectedArtifacts } = loadFixtures(fixtureDir);
   const artifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), "prime-adapter-"));
   const ctx: AdapterExecutionContext = {
-    project_root: adapter.location,
+    project_root: adapter.source.path,
     artifacts_dir: artifactsDir
   };
   const result = await runAdapter(registry, adapterId, params, artifacts, ctx);
