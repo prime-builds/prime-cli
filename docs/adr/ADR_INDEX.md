@@ -18,3 +18,4 @@ All ADRs are consistent with the Prime CLI Technical Specification.
 - ADR-0006: Run Lineage (Forking & Replay)
 - ADR-0007: Artifacts as First-Class Outputs
 - ADR-0008: Prompts as Versioned Assets
+- ADR-0009: Knowledge Base Index (SQLite FTS5)

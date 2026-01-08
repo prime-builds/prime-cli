@@ -17,11 +17,16 @@ The system follows a VS Code–style workspace model:
   - Workflow validation
   - Run lifecycle management
   - Artifact storage and indexing
+- **Knowledge Base (Docs + FTS)**:
+  - Imports project documentation into `<ProjectRoot>/docs/`
+  - Extracts text and indexes chunks with SQLite FTS5
+  - Supplies grounded snippets to the planner context
 
 ## Planning Model
 - Planner outputs strict Workflow DSL JSON.
 - Critic validates correctness and executability.
 - Prompts are versioned assets under `docs/prompts/`.
+- Planner context includes adapter capabilities, mission manifest, and retrieved doc snippets.
 
 ## Mission Manifest
 Each Chat has a pinned Mission Manifest:
