@@ -7,7 +7,7 @@ import {
   validateManifest
 } from "../../../../core/src/adapters";
 import type { AdapterRegistry } from "../registry";
-import { loadFixtures, runAdapter } from "../testing/harness";
+import { loadFixtures, prepareFixtureParams, runAdapter } from "../testing/harness";
 
 export type ConformanceResult = {
   id: string;
@@ -61,19 +61,27 @@ export async function runConformance(
       if (fs.existsSync(fixtureDir)) {
         try {
           const fixtures = loadFixtures(fixtureDir);
-          const result = await runAdapter(
-            registry,
-            manifest.id,
-            fixtures.params,
-            fixtures.artifacts,
-            {
-              project_root: runtimeResult.source.path,
-              artifacts_dir: path.join(fixtureDir, "artifacts")
+          const prepared = await prepareFixtureParams(fixtureDir, fixtures.params);
+          try {
+            const evidenceDir = path.join(fixtureDir, "evidence");
+            fs.mkdirSync(evidenceDir, { recursive: true });
+            const result = await runAdapter(
+              registry,
+              manifest.id,
+              prepared.params,
+              fixtures.artifacts,
+              {
+                project_root: runtimeResult.source.path,
+                artifacts_dir: path.join(fixtureDir, "artifacts"),
+                evidence_dir: evidenceDir
+              }
+            );
+            const executionCheck = validateExecutionResult(result, manifest);
+            if (!executionCheck.ok) {
+              errors.push(...executionCheck.errors);
             }
-          );
-          const executionCheck = validateExecutionResult(result, manifest);
-          if (!executionCheck.ok) {
-            errors.push(...executionCheck.errors);
+          } finally {
+            await prepared.cleanup?.();
           }
         } catch (error) {
           const message = error instanceof Error ? error.message : "fixture execution failed";
