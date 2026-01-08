@@ -86,6 +86,26 @@ CREATE TABLE IF NOT EXISTS artifacts (
   FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  run_id TEXT,
+  step_id TEXT,
+  chat_id TEXT,
+  artifact_id TEXT,
+  kind TEXT NOT NULL,
+  path TEXT NOT NULL,
+  description TEXT,
+  hash TEXT,
+  media_type TEXT,
+  size_bytes INTEGER,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE SET NULL,
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL,
+  FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS mission_manifests (
   mission_id TEXT PRIMARY KEY,
   chat_id TEXT NOT NULL UNIQUE,

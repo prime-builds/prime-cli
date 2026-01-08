@@ -102,6 +102,7 @@ export class Engine {
     const executor = new Executor(
       this.config.artifactsDir,
       this.repos.artifacts,
+      this.repos.evidence,
       this.registry,
       this.logger
     );

@@ -1,6 +1,7 @@
 import type Database from "better-sqlite3";
 import { ArtifactsRepo } from "./repos/artifacts";
 import { ChatsRepo } from "./repos/chats";
+import { EvidenceRepo } from "./repos/evidence";
 import { MessagesRepo } from "./repos/messages";
 import { MissionsRepo } from "./repos/missions";
 import { ProjectsRepo } from "./repos/projects";
@@ -16,6 +17,7 @@ export interface StorageRepos {
   runs: RunsRepo;
   steps: StepsRepo;
   artifacts: ArtifactsRepo;
+  evidence: EvidenceRepo;
   runEvents: RunEventsRepo;
 }
 
@@ -28,6 +30,7 @@ export function createRepos(db: Database.Database): StorageRepos {
     runs: new RunsRepo(db),
     steps: new StepsRepo(db),
     artifacts: new ArtifactsRepo(db),
+    evidence: new EvidenceRepo(db),
     runEvents: new RunEventsRepo(db)
   };
 }
