@@ -77,7 +77,7 @@ import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
 import { pathToFileURL } from "node:url";
-import Database from "better-sqlite3";
+import { createRequire } from "node:module";
 
 const repoRoot = __REPO_ROOT__;
 const projectRoot = __PROJECT_ROOT__;
@@ -91,6 +91,8 @@ async function main(): Promise<void> {
 
   const { Engine } = engineModule;
   const { validateArtifactContent } = artifactsModule;
+  const require = createRequire(path.join(repoRoot, "package.json"));
+  const Database = require("better-sqlite3");
 
   const server = http.createServer((req, res) => {
     if (!req.url) {
@@ -101,7 +103,8 @@ async function main(): Promise<void> {
     const requestPath = req.url === "/" ? "/index.html" : req.url;
     const filePath = path.join(siteRoot, requestPath);
     if (fs.existsSync(filePath)) {
-      res.writeHead(200);
+      const contentType = guessContentType(filePath);
+      res.writeHead(200, { "Content-Type": contentType });
       res.end(fs.readFileSync(filePath));
     } else {
       res.writeHead(404);
@@ -201,6 +204,19 @@ async function main(): Promise<void> {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 
   console.log("Web surface discovery verification passed.");
+}
+
+function guessContentType(filePath: string): string {
+  if (filePath.endsWith(".html")) {
+    return "text/html";
+  }
+  if (filePath.endsWith(".js")) {
+    return "text/javascript";
+  }
+  if (filePath.endsWith(".png")) {
+    return "image/png";
+  }
+  return "application/octet-stream";
 }
 
 main().catch((error) => {
