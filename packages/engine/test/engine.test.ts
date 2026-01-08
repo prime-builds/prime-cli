@@ -35,8 +35,7 @@ function createTestAdapter(id: string): AdapterDefinition {
     manifest,
     execute: async () => ({ logs: [], artifacts: [] }),
     runtime: createAdapterRuntime(manifest),
-    source: "builtin",
-    location: "test"
+    source: { kind: "builtin", path: "test" }
   };
 }
 
