@@ -37,7 +37,12 @@ import type {
   RunStartRequest,
   RunStartResponse
 } from "../../shared/src/contracts";
-import { EmptyAdapterRegistry, type AdapterRegistry } from "./adapters/registry";
+import type { AdapterArtifact } from "../../core/src/adapters";
+import {
+  EmptyAdapterRegistry,
+  FileSystemAdapterRegistry,
+  type AdapterRegistry
+} from "./adapters/registry";
 import { EngineError, NotFoundError, ValidationError } from "./errors";
 import type { EngineConfig } from "./config";
 import { Logger } from "./logger";
@@ -70,7 +75,19 @@ export class Engine {
   ) {
     this.config = config;
     this.logger = options?.logger ?? new Logger(config.logLevel ?? "info");
-    this.registry = options?.adapterRegistry ?? new EmptyAdapterRegistry();
+    this.registry =
+      options?.adapterRegistry ??
+      new FileSystemAdapterRegistry({
+        builtinsDir: path.resolve(
+          process.cwd(),
+          "packages",
+          "engine",
+          "src",
+          "adapters",
+          "builtin"
+        ),
+        logger: this.logger
+      });
     this.promptsDir =
       options?.promptsDir ?? path.resolve(process.cwd(), "docs", "prompts");
   }
@@ -178,12 +195,14 @@ export class Engine {
       project_id: chat.project_id,
       chat_id: chat.id,
       message: request.message,
-      mission
+      mission,
+      project_root: repos.projects.getById(chat.project_id)?.root_path
     });
     validateWorkflow(workflow);
     const run = runManager.startRun({
       project_id: chat.project_id,
       chat_id: chat.id,
+      project_root: repos.projects.getById(chat.project_id)?.root_path ?? "",
       workflow,
       workflowJson: JSON.stringify(workflow),
       planner_prompt_version: this.plannerPromptVersion,
@@ -210,6 +229,7 @@ export class Engine {
     const run = runManager.startRun({
       project_id: request.project_id,
       chat_id: request.chat_id,
+      project_root: project.root_path,
       workflow,
       workflowJson: JSON.stringify(workflow),
       planner_prompt_version: this.plannerPromptVersion,
@@ -233,6 +253,7 @@ export class Engine {
     if (!parentRun) {
       throw new NotFoundError("Run not found");
     }
+    const parentProject = repos.projects.getById(parentRun.project_id);
     const workflowJson = repos.runs.getWorkflowJson(request.run_id);
     if (!workflowJson) {
       throw new ValidationError("Run workflow is missing");
@@ -257,6 +278,7 @@ export class Engine {
     const run = runManager.startRun({
       project_id: parentRun.project_id,
       chat_id: parentRun.chat_id,
+      project_root: parentProject?.root_path ?? "",
       workflow: remainingWorkflow,
       workflowJson: workflowJson,
       parent_run_id: parentRun.id,
@@ -271,7 +293,8 @@ export class Engine {
           forked_from_step_id: stepRow.id,
           timestamp: this.now()
         }
-      ]
+      ],
+      initialArtifacts: buildArtifactInputs(workflow.steps.slice(0, stepIndex + 1))
     });
 
     this.copyForkArtifacts(parentRun.id, run.id, workflow.steps.slice(0, stepIndex + 1));
@@ -285,6 +308,7 @@ export class Engine {
     if (!parentRun) {
       throw new NotFoundError("Run not found");
     }
+    const parentProject = repos.projects.getById(parentRun.project_id);
     const workflowJson = repos.runs.getWorkflowJson(request.run_id);
     if (!workflowJson) {
       throw new ValidationError("Run workflow is missing");
@@ -294,6 +318,7 @@ export class Engine {
     const run = runManager.startRun({
       project_id: parentRun.project_id,
       chat_id: parentRun.chat_id,
+      project_root: parentProject?.root_path ?? "",
       workflow,
       workflowJson: workflowJson,
       replay_of_run_id: parentRun.id,
@@ -466,4 +491,16 @@ export class Engine {
     }
     return { repos: this.repos, runManager: this.runManager, planner: this.planner };
   }
+}
+
+function buildArtifactInputs(steps: WorkflowDefinition["steps"]): AdapterArtifact[] {
+  const types = new Set<string>();
+  for (const step of steps) {
+    if (step.outputs && typeof step.outputs === "object") {
+      for (const key of Object.keys(step.outputs)) {
+        types.add(key);
+      }
+    }
+  }
+  return [...types].map((type) => ({ type }));
 }

@@ -21,6 +21,7 @@ export class Planner {
     chat_id?: string;
     message: ChatMessageInput;
     mission: MissionManifest;
+    project_root?: string;
   }): WorkflowDefinition {
     const plannerPrompt = this.prompts.loadPlannerPrompt();
     const criticPrompt = this.prompts.loadCriticPrompt();
@@ -29,7 +30,7 @@ export class Planner {
       critic_bytes: criticPrompt.length
     });
 
-    const adapters = this.registry.list();
+    const adapters = this.registry.listAdapters(input.project_root);
     if (adapters.length === 0) {
       return {
         workflow_id: newId(),

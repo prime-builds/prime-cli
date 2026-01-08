@@ -3,16 +3,19 @@ import path from "path";
 import { createHash } from "crypto";
 import type { Artifact, Run } from "../../../shared/src/contracts";
 import type { AdapterRegistry } from "../adapters/registry";
-import { AdapterNotFoundError, RunCanceledError } from "../errors";
+import { AdapterNotFoundError, RunCanceledError, ValidationError } from "../errors";
 import { Logger } from "../logger";
 import type { ArtifactsRepo } from "../storage/repos/artifacts";
 import type { WorkflowStep } from "./workflow";
+import type { AdapterArtifact } from "../../../core/src/adapters";
 
 export interface StepExecutionContext {
   run: Run;
   step: WorkflowStep;
   project_id: string;
+  project_root: string;
   chat_id?: string;
+  available_artifacts: AdapterArtifact[];
   signal: AbortSignal;
   emitLog: (message: string, level?: "debug" | "info" | "warn" | "error") => void;
   emitArtifact: (artifact: Artifact, stepId: string) => void;
@@ -21,6 +24,7 @@ export interface StepExecutionContext {
 export interface StepExecutionResult {
   outputs: Record<string, unknown>;
   artifacts: Artifact[];
+  adapter_artifacts: AdapterArtifact[];
 }
 
 export class Executor {
@@ -46,9 +50,17 @@ export class Executor {
       throw new RunCanceledError();
     }
 
-    const adapter = this.registry.get(context.step.adapter);
+    const adapter = this.registry.getAdapter(context.step.adapter, context.project_root);
     if (!adapter) {
       throw new AdapterNotFoundError(context.step.adapter);
+    }
+    const validation = this.registry.validateStep(
+      context.step,
+      context.available_artifacts,
+      context.project_root
+    );
+    if (!validation.ok) {
+      throw new ValidationError(validation.errors.join("; "));
     }
 
     context.emitLog("dry-run started", "info");
@@ -65,7 +77,7 @@ export class Executor {
     const payload = {
       workflow_id: context.run.workflow_id,
       step_id: context.step.id,
-      adapter: adapter.id,
+      adapter: adapter.manifest.id,
       dry_run: true
     };
     fs.writeFileSync(artifactPath, JSON.stringify(payload, null, 2), "utf8");
@@ -98,7 +110,15 @@ export class Executor {
       outputs: {
         artifacts: [{ id: artifact.id, name: artifact.name, path: artifact.path }]
       },
-      artifacts: [artifact]
+      artifacts: [artifact],
+      adapter_artifacts: buildAdapterArtifacts(context.step)
     };
   }
+}
+
+function buildAdapterArtifacts(step: WorkflowStep): AdapterArtifact[] {
+  if (!step.outputs || typeof step.outputs !== "object") {
+    return [];
+  }
+  return Object.keys(step.outputs).map((type) => ({ type }));
 }

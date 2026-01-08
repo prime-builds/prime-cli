@@ -6,7 +6,11 @@
   ],
   "scripts": {
     "engine:headless": "tsx packages/engine/src/index.ts",
-    "test:engine": "tsx --test packages/engine/test/engine.test.ts"
+    "test:engine": "tsx --test packages/engine/test/engine.test.ts",
+    "adapters:check": "tsx packages/engine/src/adapters/conformance/cli.ts",
+    "adapters:test": "tsx packages/engine/src/adapters/testing/cli.ts",
+    "adapter:test": "tsx packages/engine/src/adapters/testing/cli.ts",
+    "adapter:new": "tsx packages/engine/src/cli/adapter.ts"
   },
   "dependencies": {
     "ajv": "^8.12.0",

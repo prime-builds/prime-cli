@@ -12,6 +12,7 @@ import { nowIso } from "../utils/time";
 import type { Executor } from "./executor";
 import { RunEventHub } from "./event-hub";
 import type { WorkflowDefinition, WorkflowStep } from "./workflow";
+import type { AdapterArtifact } from "../../../core/src/adapters";
 
 type RunTask = {
   controller: AbortController;
@@ -35,6 +36,7 @@ export class RunManager {
   startRun(input: {
     project_id: string;
     chat_id?: string;
+    project_root?: string;
     workflow: WorkflowDefinition;
     workflowJson?: string;
     parent_run_id?: string;
@@ -45,6 +47,7 @@ export class RunManager {
     planner_latency_ms?: number;
     tokens_estimate?: number;
     initialEvents?: (run: Run) => RunEvent[];
+    initialArtifacts?: AdapterArtifact[];
   }): Run {
     const startedAt = nowIso();
     const run = this.repos.runs.create({
@@ -65,9 +68,17 @@ export class RunManager {
 
     const controller = new AbortController();
     const initialEvents = input.initialEvents?.(run) ?? [];
+    const initialArtifacts = input.initialArtifacts ?? [];
     const promise = new Promise<void>((resolve) => {
       setImmediate(() => {
-        this.executeRun(run, input.workflow, controller.signal, initialEvents)
+        this.executeRun(
+          run,
+          input.workflow,
+          controller.signal,
+          initialEvents,
+          initialArtifacts,
+          input.project_root ?? ""
+        )
           .catch(() => undefined)
           .finally(() => resolve());
       });
@@ -112,7 +123,9 @@ export class RunManager {
     run: Run,
     workflow: WorkflowDefinition,
     signal: AbortSignal,
-    initialEvents: RunEvent[]
+    initialEvents: RunEvent[],
+    initialArtifacts: AdapterArtifact[],
+    projectRoot: string
   ): Promise<void> {
     try {
       if (signal.aborted) {
@@ -129,6 +142,8 @@ export class RunManager {
       for (const event of initialEvents) {
         this.emit(event);
       }
+
+      const availableArtifacts: AdapterArtifact[] = [...initialArtifacts];
 
       for (const step of workflow.steps) {
         if (signal.aborted) {
@@ -160,7 +175,9 @@ export class RunManager {
             run,
             step,
             project_id: run.project_id,
+            project_root: projectRoot,
             chat_id: run.chat_id,
+            available_artifacts: availableArtifacts,
             signal,
             emitLog: (message, level) => {
               this.emit({
@@ -191,6 +208,9 @@ export class RunManager {
             status: "succeeded",
             timestamp: nowIso()
           });
+          for (const artifact of result.adapter_artifacts) {
+            availableArtifacts.push(artifact);
+          }
         } catch (error) {
           const status: RunStepStatus =
             error instanceof RunCanceledError ? "canceled" : "failed";
