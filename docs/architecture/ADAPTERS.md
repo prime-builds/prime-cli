@@ -13,11 +13,17 @@ engine and adapter runtime.
 
 ## Discovery
 Registry discovery is filesystem-based:
-- Built-in adapters: `packages/engine/src/adapters/builtin/**`
-- Project-local adapters: `<ProjectRoot>/local_adapters/**`
+- Built-in adapters: `packages/engine/src/adapters/builtin/<id>/`
+- Project-local adapters: `<ProjectRoot>/local_adapters/<id>/`
 
 Local adapters override built-ins with the same id and can be added without
 engine code changes.
+
+## Precedence and Conflicts
+If the same adapter id exists in both locations, the local adapter wins. The
+registry records the conflict and emits a single deterministic warning for each
+id. Conflicts and load errors are available via registry diagnostics and are
+printed by `npm run adapters:check` and `npm run adapters:test`.
 
 ## Validation and Testing
 - `npm run adapters:check` runs the conformance suite (manifest validity,
