@@ -6,7 +6,6 @@ import type { AdapterRegistry } from "../adapters/registry";
 import { AdapterNotFoundError, RunCanceledError } from "../errors";
 import { Logger } from "../logger";
 import type { ArtifactsRepo } from "../storage/repos/artifacts";
-import { nowIso } from "../utils/time";
 import type { WorkflowStep } from "./workflow";
 
 export interface StepExecutionContext {
@@ -64,10 +63,9 @@ export class Executor {
     const artifactName = `${context.step.id}-dry-run.json`;
     const artifactPath = path.join(runDir, artifactName);
     const payload = {
-      run_id: context.run.id,
+      workflow_id: context.run.workflow_id,
       step_id: context.step.id,
       adapter: adapter.id,
-      generated_at: nowIso(),
       dry_run: true
     };
     fs.writeFileSync(artifactPath, JSON.stringify(payload, null, 2), "utf8");

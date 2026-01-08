@@ -100,6 +100,13 @@ export class ArtifactsRepo {
     return row ? this.toArtifact(row) : null;
   }
 
+  updateContent(input: { id: string; hash: string; size_bytes: number }): Artifact | null {
+    this.db
+      .prepare("UPDATE artifacts SET hash = ?, size_bytes = ? WHERE id = ?")
+      .run(input.hash, input.size_bytes, input.id);
+    return this.getById(input.id);
+  }
+
   private toArtifact(row: ArtifactRow): Artifact {
     return {
       id: row.id,

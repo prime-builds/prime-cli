@@ -32,13 +32,24 @@ CREATE TABLE IF NOT EXISTS runs (
   project_id TEXT NOT NULL,
   chat_id TEXT,
   workflow_id TEXT NOT NULL,
+  workflow_json TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   started_at TEXT,
   finished_at TEXT,
   error TEXT,
+  parent_run_id TEXT,
+  forked_from_step_id TEXT,
+  replay_of_run_id TEXT,
+  planner_prompt_version TEXT,
+  critic_prompt_version TEXT,
+  planner_latency_ms INTEGER,
+  tokens_estimate INTEGER,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL,
+  FOREIGN KEY (parent_run_id) REFERENCES runs(id) ON DELETE SET NULL,
+  FOREIGN KEY (forked_from_step_id) REFERENCES run_steps(id) ON DELETE SET NULL,
+  FOREIGN KEY (replay_of_run_id) REFERENCES runs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS run_steps (
@@ -73,4 +84,25 @@ CREATE TABLE IF NOT EXISTS artifacts (
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE SET NULL,
   FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS mission_manifests (
+  mission_id TEXT PRIMARY KEY,
+  chat_id TEXT NOT NULL UNIQUE,
+  objective TEXT NOT NULL,
+  scope_targets TEXT NOT NULL,
+  constraints TEXT,
+  success_criteria TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS run_events (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
 );
