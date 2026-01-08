@@ -47,30 +47,58 @@ export class Planner {
       };
     }
 
-    const adapter = summaries[0];
+    const shouldDiscoverWeb = wantsWebDiscovery(input.message.content);
+    const targetUrl = input.mission.scope_targets[0];
+    const webAdapter = summaries.find((summary) => summary.id === "web.surface.discover.http");
+    if (shouldDiscoverWeb && webAdapter && targetUrl) {
+      return {
+        workflow_id: newId(),
+        project_id: input.project_id,
+        chat_id: input.chat_id,
+        scope: { targets: input.mission.scope_targets },
+        steps: [
+          {
+            id: "step-1",
+            adapter: webAdapter.id,
+            category: webAdapter.category,
+            risk: webAdapter.risk_default,
+            inputs: {
+              mission: {
+                objective: input.mission.objective,
+                scope_targets: input.mission.scope_targets
+              }
+            },
+            outputs: {
+              "web_surface.json": {}
+            },
+            limits: {},
+            params: {
+              target_url: targetUrl
+            }
+          }
+        ]
+      };
+    }
+
     return {
       workflow_id: newId(),
       project_id: input.project_id,
       chat_id: input.chat_id,
       scope: { targets: input.mission.scope_targets },
-      steps: [
-        {
-          id: "step-1",
-          adapter: adapter.id,
-          category: "dry-run",
-          risk: "low",
-          inputs: {
-            message: input.message.content,
-            mission: {
-              objective: input.mission.objective,
-              scope_targets: input.mission.scope_targets
-            }
-          },
-          outputs: {},
-          limits: {},
-          params: {}
-        }
-      ]
+      steps: []
     };
   }
+}
+
+function wantsWebDiscovery(message: string): boolean {
+  const text = message.toLowerCase();
+  return (
+    text.includes("web discovery") ||
+    text.includes("web surface") ||
+    text.includes("surface") ||
+    text.includes("urls") ||
+    text.includes("url discovery") ||
+    text.includes("discover urls") ||
+    text.includes("crawl")
+  );
 }
