@@ -10,7 +10,7 @@
 <ProjectRoot>/
   docs/
   artifacts/<run_id>/
-  evidence/<run_id>/
+  evidence/<run_id>/<step_id>/
   reports/
   logs/
 
@@ -22,6 +22,7 @@
 - runs
 - run_steps
 - artifacts
+- evidence
 
 ## Mission Manifests
 Stored as a dedicated table, one per chat.
@@ -34,6 +35,10 @@ Stored as a dedicated table, one per chat.
   - size
   - producing run/step
   - timestamps
+
+## Evidence
+- Raw outputs and response samples stored under `evidence/<run_id>/<step_id>/`
+- Evidence metadata recorded in SQLite for traceability
 
 ## Versioning
 Artifact edits preserve prior versions via backup files.
