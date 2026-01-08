@@ -126,3 +126,39 @@ CREATE TABLE IF NOT EXISTS run_events (
   created_at TEXT NOT NULL,
   FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS docs (
+  doc_id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  source_path TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_ext TEXT NOT NULL,
+  sha256 TEXT NOT NULL,
+  bytes INTEGER NOT NULL,
+  mime TEXT,
+  title TEXT,
+  tool_name TEXT,
+  category TEXT,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS doc_chunks (
+  chunk_id TEXT PRIMARY KEY,
+  doc_id TEXT NOT NULL,
+  ordinal INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  start_offset INTEGER,
+  end_offset INTEGER,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (doc_id) REFERENCES docs(doc_id) ON DELETE CASCADE
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS doc_chunks_fts USING fts5(
+  chunk_id,
+  doc_id,
+  text
+);
+
+CREATE INDEX IF NOT EXISTS idx_docs_project_id ON docs(project_id);
+CREATE INDEX IF NOT EXISTS idx_doc_chunks_doc_id ON doc_chunks(doc_id);
