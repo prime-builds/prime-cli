@@ -4,3 +4,5 @@ artifacts/
 *.db
 *.sqlite
 *.sqlite3
+local_adapters/
+packages/engine/src/adapters/builtin/web.surface.discover/
