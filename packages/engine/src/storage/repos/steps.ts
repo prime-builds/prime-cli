@@ -109,6 +109,20 @@ export class StepsRepo {
     return row ? this.toStep(row) : null;
   }
 
+  getByRunAndStepId(runId: string, stepId: string): RunStep | null {
+    const row = this.db
+      .prepare("SELECT * FROM run_steps WHERE run_id = ? AND step_id = ?")
+      .get(runId, stepId) as StepRow | undefined;
+    return row ? this.toStep(row) : null;
+  }
+
+  listByRun(runId: string): RunStep[] {
+    const rows = this.db
+      .prepare("SELECT * FROM run_steps WHERE run_id = ? ORDER BY created_at ASC")
+      .all(runId) as StepRow[];
+    return rows.map(this.toStep);
+  }
+
   private toStep(row: StepRow): RunStep {
     return {
       id: row.id,
