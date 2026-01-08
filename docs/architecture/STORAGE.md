@@ -23,6 +23,9 @@
 - run_steps
 - artifacts
 - evidence
+- docs
+- doc_chunks
+- doc_chunks_fts (FTS5)
 
 ## Mission Manifests
 Stored as a dedicated table, one per chat.
@@ -39,6 +42,12 @@ Stored as a dedicated table, one per chat.
 ## Evidence
 - Raw outputs and response samples stored under `evidence/<run_id>/<step_id>/`
 - Evidence metadata recorded in SQLite for traceability
+
+## Knowledge Base Docs
+- Imported files are copied into `<ProjectRoot>/docs/`
+- `docs` stores document metadata (paths, hashes, tags)
+- `doc_chunks` stores extracted text segments
+- `doc_chunks_fts` provides full-text search over chunks
 
 ## Versioning
 Artifact edits preserve prior versions via backup files.

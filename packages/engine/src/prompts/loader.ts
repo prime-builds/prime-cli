@@ -24,7 +24,7 @@ export class PromptLoader {
   }
 
   loadPlannerPrompt(): string {
-    return this.loadPrompt("planner-v0.md");
+    return this.loadPrompt("planner-v1.md");
   }
 
   loadCriticPrompt(): string {

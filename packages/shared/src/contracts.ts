@@ -79,6 +79,31 @@ export interface Artifact {
   created_at: ISODateTime;
 }
 
+export interface DocRecord {
+  doc_id: ID;
+  project_id: ID;
+  source_path: string;
+  file_name: string;
+  file_ext: string;
+  sha256: string;
+  bytes: number;
+  mime?: string;
+  title?: string;
+  tool_name?: string;
+  category?: string;
+  created_at: ISODateTime;
+}
+
+export interface DocChunk {
+  chunk_id: ID;
+  doc_id: ID;
+  ordinal: number;
+  text: string;
+  start_offset?: number;
+  end_offset?: number;
+  created_at: ISODateTime;
+}
+
 export interface MissionManifest {
   mission_id: string;
   chat_id: string;
@@ -304,6 +329,68 @@ export interface ArtifactUpdateResponse {
   artifact: Artifact;
 }
 
+export interface DocsImportRequest {
+  project_id: ID;
+  file_paths: string[];
+  tags?: {
+    tool_name?: string;
+    category?: string;
+  };
+}
+
+export interface DocsImportResponse {
+  imported: number;
+  skipped: number;
+  errors: Array<{ file_path: string; error: string }>;
+}
+
+export interface DocsListRequest {
+  project_id: ID;
+  filter?: {
+    tool_name?: string;
+    category?: string;
+    ext?: string;
+  };
+}
+
+export interface DocsListResponse {
+  docs: DocRecord[];
+}
+
+export interface DocsSearchRequest {
+  project_id: ID;
+  query: string;
+  top_k?: number;
+  filter?: {
+    tool_name?: string;
+    category?: string;
+  };
+}
+
+export interface DocsSearchResult {
+  doc_id: ID;
+  chunk_id: ID;
+  score: number;
+  snippet: string;
+  file_name: string;
+  tool_name?: string;
+  category?: string;
+}
+
+export interface DocsSearchResponse {
+  results: DocsSearchResult[];
+}
+
+export interface DocsOpenRequest {
+  project_id: ID;
+  doc_id: ID;
+}
+
+export interface DocsOpenResponse {
+  doc: DocRecord;
+  absolute_path: string;
+}
+
 export interface MissionGetRequest {
   chat_id: ID;
 }
@@ -338,4 +425,8 @@ export interface IpcContracts {
   "artifact.list": { request: ArtifactListRequest; response: ArtifactListResponse };
   "artifact.open": { request: ArtifactOpenRequest; response: ArtifactOpenResponse };
   "artifact.update": { request: ArtifactUpdateRequest; response: ArtifactUpdateResponse };
+  "docs.import": { request: DocsImportRequest; response: DocsImportResponse };
+  "docs.list": { request: DocsListRequest; response: DocsListResponse };
+  "docs.search": { request: DocsSearchRequest; response: DocsSearchResponse };
+  "docs.open": { request: DocsOpenRequest; response: DocsOpenResponse };
 }

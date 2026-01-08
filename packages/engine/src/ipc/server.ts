@@ -79,6 +79,14 @@ export class EngineIpcServer {
         return this.engine.openArtifact(request.params);
       case "artifact.update":
         return this.engine.updateArtifact(request.params);
+      case "docs.import":
+        return this.engine.importDocs(request.params);
+      case "docs.list":
+        return this.engine.listDocs(request.params);
+      case "docs.search":
+        return this.engine.searchDocs(request.params);
+      case "docs.open":
+        return this.engine.openDoc(request.params);
       default:
         throw new EngineError("UNKNOWN_METHOD", `Unknown method: ${request.method}`);
     }
