@@ -85,121 +85,128 @@ const siteRoot = __SITE_ROOT__;
 const artifactsDir = __ARTIFACTS_DIR__;
 const dbPath = __DB_PATH__;
 
-const engineModule = await import(pathToFileURL(path.join(repoRoot, "packages", "engine", "src", "index.ts")).href);
-const artifactsModule = await import(pathToFileURL(path.join(repoRoot, "packages", "core", "src", "artifacts", "index.ts")).href);
+async function main(): Promise<void> {
+  const engineModule = await import(pathToFileURL(path.join(repoRoot, "packages", "engine", "src", "index.ts")).href);
+  const artifactsModule = await import(pathToFileURL(path.join(repoRoot, "packages", "core", "src", "artifacts", "index.ts")).href);
 
-const { Engine } = engineModule;
-const { validateArtifactContent } = artifactsModule;
+  const { Engine } = engineModule;
+  const { validateArtifactContent } = artifactsModule;
 
-const server = http.createServer((req, res) => {
-  if (!req.url) {
-    res.writeHead(400);
-    res.end();
-    return;
-  }
-  const requestPath = req.url === "/" ? "/index.html" : req.url;
-  const filePath = path.join(siteRoot, requestPath);
-  if (fs.existsSync(filePath)) {
-    res.writeHead(200);
-    res.end(fs.readFileSync(filePath));
-  } else {
-    res.writeHead(404);
-    res.end();
-  }
-});
-
-await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-const address = server.address();
-if (!address || typeof address === "string") {
-  throw new Error("Failed to start server");
-}
-const baseUrl = `http://127.0.0.1:${address.port}`;
-const targetUrl = `${baseUrl}/index.html`;
-
-const engine = new Engine({
-  dbPath,
-  artifactsDir,
-  logLevel: "error"
-});
-await engine.start();
-
-const { project } = await engine.createProject({
-  name: "Web Surface Project",
-  root_path: projectRoot
-});
-const { chat } = await engine.createChat({ project_id: project.id, title: "Web Chat" });
-
-const workflow = {
-  workflow_id: "workflow-web-surface",
-  project_id: project.id,
-  chat_id: chat.id,
-  scope: { targets: [targetUrl] },
-  steps: [
-    {
-      id: "step-1",
-      adapter: "web.surface.discover.http",
-      category: "web",
-      risk: "passive",
-      inputs: {},
-      outputs: { "web_surface.json": {} },
-      limits: {},
-      params: { target_url: targetUrl, max_depth: 1, max_pages: 5, timeout_sec: 2 }
+  const server = http.createServer((req, res) => {
+    if (!req.url) {
+      res.writeHead(400);
+      res.end();
+      return;
     }
-  ]
-};
+    const requestPath = req.url === "/" ? "/index.html" : req.url;
+    const filePath = path.join(siteRoot, requestPath);
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200);
+      res.end(fs.readFileSync(filePath));
+    } else {
+      res.writeHead(404);
+      res.end();
+    }
+  });
 
-const { run } = await engine.startRun({
-  project_id: project.id,
-  chat_id: chat.id,
-  workflow_id: workflow.workflow_id,
-  inputs: { workflow }
-});
-
-await engine.waitForRun(run.id);
-
-const { artifacts } = await engine.listArtifacts({ run_id: run.id });
-if (artifacts.length === 0) {
-  throw new Error("No artifacts produced");
-}
-
-const artifact = artifacts[0];
-const payload = JSON.parse(fs.readFileSync(artifact.path, "utf8"));
-const validation = validateArtifactContent("web_surface.json", payload);
-if (!validation.ok) {
-  throw new Error(`Artifact validation failed: ${validation.errors.join("; ")}`);
-}
-if (!payload.urls || !payload.urls.some((entry: { url: string }) => entry.url.endsWith("/about.html"))) {
-  throw new Error("Expected URL not found in artifact");
-}
-if (!payload.evidence || payload.evidence.length === 0) {
-  throw new Error("Expected evidence entries in artifact");
-}
-
-const evidenceDir = path.join(projectRoot, "evidence", run.id, "step-1");
-if (!fs.existsSync(evidenceDir) || fs.readdirSync(evidenceDir).length === 0) {
-  throw new Error("Evidence files missing");
-}
-
-const db = new Database(dbPath);
-const evidenceRows = db.prepare("SELECT id FROM evidence WHERE run_id = ?").all(run.id);
-if (evidenceRows.length === 0) {
-  throw new Error("Evidence rows missing in SQLite");
-}
-
-const events = db.prepare("SELECT type FROM run_events WHERE run_id = ? ORDER BY created_at ASC").all(run.id);
-const types = events.map((row: { type: string }) => row.type);
-const required = ["RUN_STARTED", "STEP_STARTED", "ARTIFACT_WRITTEN", "STEP_FINISHED", "RUN_FINISHED"];
-for (const event of required) {
-  if (!types.includes(event)) {
-    throw new Error(`Missing event: ${event}`);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to start server");
   }
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  const targetUrl = `${baseUrl}/index.html`;
+
+  const engine = new Engine({
+    dbPath,
+    artifactsDir,
+    logLevel: "error"
+  });
+  await engine.start();
+
+  const { project } = await engine.createProject({
+    name: "Web Surface Project",
+    root_path: projectRoot
+  });
+  const { chat } = await engine.createChat({ project_id: project.id, title: "Web Chat" });
+
+  const workflow = {
+    workflow_id: "workflow-web-surface",
+    project_id: project.id,
+    chat_id: chat.id,
+    scope: { targets: [targetUrl] },
+    steps: [
+      {
+        id: "step-1",
+        adapter: "web.surface.discover.http",
+        category: "web",
+        risk: "passive",
+        inputs: {},
+        outputs: { "web_surface.json": {} },
+        limits: {},
+        params: { target_url: targetUrl, max_depth: 1, max_pages: 5, timeout_sec: 2 }
+      }
+    ]
+  };
+
+  const { run } = await engine.startRun({
+    project_id: project.id,
+    chat_id: chat.id,
+    workflow_id: workflow.workflow_id,
+    inputs: { workflow }
+  });
+
+  await engine.waitForRun(run.id);
+
+  const { artifacts } = await engine.listArtifacts({ run_id: run.id });
+  if (artifacts.length === 0) {
+    throw new Error("No artifacts produced");
+  }
+
+  const artifact = artifacts[0];
+  const payload = JSON.parse(fs.readFileSync(artifact.path, "utf8"));
+  const validation = validateArtifactContent("web_surface.json", payload);
+  if (!validation.ok) {
+    throw new Error(`Artifact validation failed: ${validation.errors.join("; ")}`);
+  }
+  if (!payload.urls || !payload.urls.some((entry: { url: string }) => entry.url.endsWith("/about.html"))) {
+    throw new Error("Expected URL not found in artifact");
+  }
+  if (!payload.evidence || payload.evidence.length === 0) {
+    throw new Error("Expected evidence entries in artifact");
+  }
+
+  const evidenceDir = path.join(projectRoot, "evidence", run.id, "step-1");
+  if (!fs.existsSync(evidenceDir) || fs.readdirSync(evidenceDir).length === 0) {
+    throw new Error("Evidence files missing");
+  }
+
+  const db = new Database(dbPath);
+  const evidenceRows = db.prepare("SELECT id FROM evidence WHERE run_id = ?").all(run.id);
+  if (evidenceRows.length === 0) {
+    throw new Error("Evidence rows missing in SQLite");
+  }
+
+  const events = db.prepare("SELECT type FROM run_events WHERE run_id = ? ORDER BY created_at ASC").all(run.id);
+  const types = events.map((row: { type: string }) => row.type);
+  const required = ["RUN_STARTED", "STEP_STARTED", "ARTIFACT_WRITTEN", "STEP_FINISHED", "RUN_FINISHED"];
+  for (const event of required) {
+    if (!types.includes(event)) {
+      throw new Error(`Missing event: ${event}`);
+    }
+  }
+
+  db.close();
+  await engine.stop();
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+
+  console.log("Web surface discovery verification passed.");
 }
 
-db.close();
-await engine.stop();
-await new Promise<void>((resolve) => server.close(() => resolve()));
-
-console.log("Web surface discovery verification passed.");
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 '@
 
 $runnerScript = $runnerTemplate
