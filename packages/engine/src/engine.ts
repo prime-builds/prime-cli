@@ -16,6 +16,14 @@ import type {
   ChatMessageInput,
   ChatSendMessageRequest,
   ChatSendMessageResponse,
+  DocsImportRequest,
+  DocsImportResponse,
+  DocsListRequest,
+  DocsListResponse,
+  DocsOpenRequest,
+  DocsOpenResponse,
+  DocsSearchRequest,
+  DocsSearchResponse,
   MissionGetRequest,
   MissionGetResponse,
   MissionManifest,
@@ -43,6 +51,7 @@ import {
   FileSystemAdapterRegistry,
   type AdapterRegistry
 } from "./adapters/registry";
+import { DocsService } from "./docs";
 import { EngineError, NotFoundError, ValidationError } from "./errors";
 import type { EngineConfig } from "./config";
 import { Logger } from "./logger";
@@ -62,12 +71,13 @@ export class Engine {
   private readonly registry: AdapterRegistry;
   private readonly events = new RunEventHub();
   private readonly promptsDir: string;
-  private readonly plannerPromptVersion = "planner-v0.md";
+  private readonly plannerPromptVersion = "planner-v1";
   private readonly criticPromptVersion = "critic-v0.md";
   private db?: Database.Database;
   private repos?: StorageRepos;
   private runManager?: RunManager;
   private planner?: Planner;
+  private docs?: DocsService;
 
   constructor(
     config: EngineConfig,
@@ -97,8 +107,10 @@ export class Engine {
     this.db = openDatabase(this.config.dbPath, this.logger);
     this.repos = createRepos(this.db);
 
+    this.docs = new DocsService(this.repos, this.logger);
+
     const promptLoader = new PromptLoader(this.promptsDir, this.logger);
-    this.planner = new Planner(promptLoader, this.registry, this.logger);
+    this.planner = new Planner(promptLoader, this.registry, this.docs, this.logger);
     const executor = new Executor(
       this.config.artifactsDir,
       this.repos.artifacts,
@@ -125,8 +137,9 @@ export class Engine {
   }
 
   async createProject(request: ProjectCreateRequest): Promise<ProjectCreateResponse> {
-    const { repos } = this.ensureReady();
+    const { repos, docs } = this.ensureReady();
     const project = repos.projects.create(request);
+    docs.ensureProjectDocsDir(project.root_path);
     return { project };
   }
 
@@ -136,7 +149,7 @@ export class Engine {
   }
 
   async openProject(request: ProjectOpenRequest): Promise<ProjectOpenResponse> {
-    const { repos } = this.ensureReady();
+    const { repos, docs } = this.ensureReady();
     const project =
       "project_id" in request
         ? repos.projects.getById(request.project_id)
@@ -144,6 +157,7 @@ export class Engine {
     if (!project) {
       throw new NotFoundError("Project not found");
     }
+    docs.ensureProjectDocsDir(project.root_path);
     return { project };
   }
 
@@ -399,6 +413,26 @@ export class Engine {
     return { artifact: updated };
   }
 
+  async importDocs(request: DocsImportRequest): Promise<DocsImportResponse> {
+    const { docs } = this.ensureReady();
+    return docs.importDocs(request);
+  }
+
+  async listDocs(request: DocsListRequest): Promise<DocsListResponse> {
+    const { docs } = this.ensureReady();
+    return docs.listDocs(request);
+  }
+
+  async searchDocs(request: DocsSearchRequest): Promise<DocsSearchResponse> {
+    const { docs } = this.ensureReady();
+    return docs.searchDocs(request);
+  }
+
+  async openDoc(request: DocsOpenRequest): Promise<DocsOpenResponse> {
+    const { docs } = this.ensureReady();
+    return docs.openDoc(request);
+  }
+
   private resolveWorkflow(request: RunStartRequest): WorkflowDefinition {
     const workflow = request.inputs?.workflow;
     if (workflow && typeof workflow === "object") {
@@ -487,10 +521,15 @@ export class Engine {
   }
 
   private ensureReady(): { repos: StorageRepos; runManager: RunManager; planner: Planner } {
-    if (!this.repos || !this.runManager || !this.planner) {
+    if (!this.repos || !this.runManager || !this.planner || !this.docs) {
       throw new EngineError("ENGINE_NOT_READY", "Engine has not been started");
     }
-    return { repos: this.repos, runManager: this.runManager, planner: this.planner };
+    return {
+      repos: this.repos,
+      runManager: this.runManager,
+      planner: this.planner,
+      docs: this.docs
+    };
   }
 }
 
