@@ -1,0 +1,8 @@
+{
+  "target_url": "{{fixture_server_url}}/index.html",
+  "max_depth": 1,
+  "max_pages": 3,
+  "timeout_sec": 2,
+  "user_agent": "Prime-CLI-Test",
+  "follow_redirects": true
+}

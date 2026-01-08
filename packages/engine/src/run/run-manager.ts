@@ -178,6 +178,7 @@ export class RunManager {
             project_root: projectRoot,
             chat_id: run.chat_id,
             available_artifacts: availableArtifacts,
+            scope_targets: workflow.scope?.targets,
             signal,
             emitLog: (message, level) => {
               this.emit({

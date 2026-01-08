@@ -28,6 +28,12 @@ Humans may edit artifacts mid-run:
 - Hash recomputed
 - ARTIFACT_EDITED event emitted
 
+## Evidence and Raw Output
+Executors may write raw evidence for debugging:
+- Stored under `<ProjectRoot>/evidence/<run_id>/<step_id>/`
+- Evidence metadata is registered in SQLite
+- Evidence paths may be referenced from artifacts
+
 ## Run Forking & Replay
 - Fork: create new run from previous step
 - Replay: re-run identical workflow and inputs

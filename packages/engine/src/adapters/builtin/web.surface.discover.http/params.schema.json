@@ -1,0 +1,38 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "target_url": {
+      "type": "string",
+      "description": "Target URL to crawl (must be in scope.targets)."
+    },
+    "max_depth": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1,
+      "description": "Maximum link depth from the target page."
+    },
+    "max_pages": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 25,
+      "description": "Maximum number of pages to fetch."
+    },
+    "timeout_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 10,
+      "description": "Request timeout in seconds."
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "Optional User-Agent header."
+    },
+    "follow_redirects": {
+      "type": "boolean",
+      "default": true,
+      "description": "Follow HTTP redirects."
+    }
+  },
+  "required": ["target_url"]
+}

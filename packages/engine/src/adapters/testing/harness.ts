@@ -1,4 +1,5 @@
 import fs from "fs";
+import http from "http";
 import os from "os";
 import path from "path";
 import type {
@@ -13,6 +14,11 @@ export type AdapterFixture = {
   params: Record<string, unknown>;
   artifacts: AdapterArtifact[];
   expectedArtifacts: AdapterArtifact[];
+};
+
+export type FixtureServer = {
+  baseUrl: string;
+  close: () => Promise<void>;
 };
 
 export async function runAdapter(
@@ -55,13 +61,27 @@ export async function runAdapterWithFixtures(
   }
   const fixtureDir = path.join(adapter.source.path, "fixtures");
   const { params, artifacts, expectedArtifacts } = loadFixtures(fixtureDir);
+  const prepared = await prepareFixtureParams(fixtureDir, params);
   const artifactsDir = fs.mkdtempSync(path.join(os.tmpdir(), "prime-adapter-"));
+  const evidenceDir = path.join(artifactsDir, "evidence");
+  fs.mkdirSync(evidenceDir, { recursive: true });
   const ctx: AdapterExecutionContext = {
     project_root: adapter.source.path,
-    artifacts_dir: artifactsDir
+    artifacts_dir: artifactsDir,
+    evidence_dir: evidenceDir
   };
-  const result = await runAdapter(registry, adapterId, params, artifacts, ctx);
-  compareArtifacts(expectedArtifacts, result.artifacts);
+  try {
+    const result = await runAdapter(
+      registry,
+      adapterId,
+      prepared.params,
+      artifacts,
+      ctx
+    );
+    compareArtifacts(expectedArtifacts, result.artifacts);
+  } finally {
+    await prepared.cleanup?.();
+  }
 }
 
 export function loadFixtures(fixtureDir: string): AdapterFixture {
@@ -81,6 +101,27 @@ export function loadFixtures(fixtureDir: string): AdapterFixture {
   }
 
   return { params, artifacts, expectedArtifacts };
+}
+
+export async function prepareFixtureParams(
+  fixtureDir: string,
+  params: Record<string, unknown>
+): Promise<{ params: Record<string, unknown>; cleanup?: () => Promise<void> }> {
+  const siteDir = path.join(fixtureDir, "inputs", "site");
+  if (!fs.existsSync(siteDir)) {
+    return { params };
+  }
+
+  const server = await startFixtureServer(siteDir);
+  const nextParams = { ...params };
+  const targetValue = typeof nextParams.target_url === "string" ? nextParams.target_url : "";
+  if (targetValue.includes("{{fixture_server_url}}")) {
+    nextParams.target_url = targetValue.replace("{{fixture_server_url}}", server.baseUrl);
+  } else if (!targetValue) {
+    nextParams.target_url = `${server.baseUrl}/index.html`;
+  }
+
+  return { params: nextParams, cleanup: server.close };
 }
 
 function readJsonFile(filePath: string, fallback: unknown): unknown {
@@ -131,4 +172,64 @@ function assertDeepEqual(actual: unknown, expected: unknown): void {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error("Artifact content mismatch");
   }
+}
+
+async function startFixtureServer(siteDir: string): Promise<FixtureServer> {
+  const server = http.createServer((req, res) => {
+    if (!req.url) {
+      res.writeHead(400);
+      res.end();
+      return;
+    }
+    const url = new URL(req.url, "http://localhost");
+    const pathname = decodeURIComponent(url.pathname);
+    const resolvedPath = safeJoin(siteDir, pathname === "/" ? "/index.html" : pathname);
+    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    const content = fs.readFileSync(resolvedPath);
+    res.writeHead(200, { "Content-Type": guessContentType(resolvedPath) });
+    res.end(content);
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to start fixture server");
+  }
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  return {
+    baseUrl,
+    close: () =>
+      new Promise((resolve) => {
+        server.close(() => resolve());
+      })
+  };
+}
+
+function safeJoin(root: string, requestPath: string): string | null {
+  const resolved = path.resolve(root, `.${requestPath}`);
+  if (!resolved.startsWith(path.resolve(root))) {
+    return null;
+  }
+  return resolved;
+}
+
+function guessContentType(filePath: string): string {
+  if (filePath.endsWith(".html")) {
+    return "text/html";
+  }
+  if (filePath.endsWith(".js")) {
+    return "text/javascript";
+  }
+  if (filePath.endsWith(".json")) {
+    return "application/json";
+  }
+  return "application/octet-stream";
 }

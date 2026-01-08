@@ -31,6 +31,10 @@ printed by `npm run adapters:check` and `npm run adapters:test`.
 - `npm run adapters:test` runs fixture-based adapter tests.
 - `npm run adapter:test -- --id <adapterId>` runs a single adapter.
 
+## Real Execution Adapter Example
+The built-in `web.surface.discover.http` adapter performs passive HTTP surface
+discovery and produces a `web_surface.json` artifact plus evidence references.
+
 ## Local Adapters
 Place a local adapter under `<ProjectRoot>/local_adapters/<adapterId>/` with
 `manifest.ts`, `adapter.ts`, and fixtures. The registry loads them dynamically,

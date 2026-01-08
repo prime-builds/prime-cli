@@ -104,6 +104,35 @@ const migrations: Migration[] = [
         }
       }
     }
+  },
+  {
+    id: "0005",
+    name: "evidence-table",
+    up: (db) => {
+      if (!tableExists(db, "evidence")) {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS evidence (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            run_id TEXT,
+            step_id TEXT,
+            chat_id TEXT,
+            artifact_id TEXT,
+            kind TEXT NOT NULL,
+            path TEXT NOT NULL,
+            description TEXT,
+            hash TEXT,
+            media_type TEXT,
+            size_bytes INTEGER,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+            FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE SET NULL,
+            FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE SET NULL,
+            FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE SET NULL
+          )
+        `);
+      }
+    }
   }
 ];
 
