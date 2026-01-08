@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Relative path to a JSON file under the project root."
+    }
+  },
+  "required": ["path"]
+}

@@ -1,0 +1,11 @@
+[
+  {
+    "type": "extracted_data.json",
+    "content_json": {
+      "data": {
+        "name": "Prime CLI",
+        "items": [1, 2, 3]
+      }
+    }
+  }
+]
