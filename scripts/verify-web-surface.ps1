@@ -72,18 +72,18 @@ $artifactsDirJson = ($artifactsDir | ConvertTo-Json -Compress)
 $dbPathJson = ($dbPath | ConvertTo-Json -Compress)
 
 $runnerPath = Join-Path $tempRoot "run-web-surface.ts"
-@"
+$runnerTemplate = @'
 import fs from "node:fs";
 import path from "node:path";
 import http from "node:http";
 import { pathToFileURL } from "node:url";
 import Database from "better-sqlite3";
 
-const repoRoot = $repoRootJson;
-const projectRoot = $projectRootJson;
-const siteRoot = $siteRootJson;
-const artifactsDir = $artifactsDirJson;
-const dbPath = $dbPathJson;
+const repoRoot = __REPO_ROOT__;
+const projectRoot = __PROJECT_ROOT__;
+const siteRoot = __SITE_ROOT__;
+const artifactsDir = __ARTIFACTS_DIR__;
+const dbPath = __DB_PATH__;
 
 const engineModule = await import(pathToFileURL(path.join(repoRoot, "packages", "engine", "src", "index.ts")).href);
 const artifactsModule = await import(pathToFileURL(path.join(repoRoot, "packages", "core", "src", "artifacts", "index.ts")).href);
@@ -200,7 +200,15 @@ await engine.stop();
 await new Promise<void>((resolve) => server.close(() => resolve()));
 
 console.log("Web surface discovery verification passed.");
-"@ | Set-Content $runnerPath -Encoding utf8
+'@
+
+$runnerScript = $runnerTemplate
+$runnerScript = $runnerScript.Replace("__REPO_ROOT__", $repoRootJson)
+$runnerScript = $runnerScript.Replace("__PROJECT_ROOT__", $projectRootJson)
+$runnerScript = $runnerScript.Replace("__SITE_ROOT__", $siteRootJson)
+$runnerScript = $runnerScript.Replace("__ARTIFACTS_DIR__", $artifactsDirJson)
+$runnerScript = $runnerScript.Replace("__DB_PATH__", $dbPathJson)
+$runnerScript | Set-Content $runnerPath -Encoding utf8
 
 Write-Section "Running end-to-end web surface discovery"
 npx tsx $runnerPath
