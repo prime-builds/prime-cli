@@ -1,0 +1,8 @@
+{
+  "url": "https://example.com/",
+  "status": 200,
+  "headers": {
+    "content-type": "text/html"
+  },
+  "body_sample": "<html><body><h1>Index of /</h1><form action=\"/login\"><input type=\"password\"></form></body></html>"
+}

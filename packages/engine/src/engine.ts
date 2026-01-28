@@ -46,6 +46,7 @@ import type {
   RunStartResponse
 } from "../../shared/src/contracts";
 import type { AdapterArtifact } from "../../core/src/adapters";
+import { listArtifactSchemas } from "../../core/src/artifacts";
 import {
   EmptyAdapterRegistry,
   FileSystemAdapterRegistry,
@@ -116,7 +117,8 @@ export class Engine {
       this.repos.artifacts,
       this.repos.evidence,
       this.registry,
-      this.logger
+      this.logger,
+      this.docs
     );
     this.runManager = new RunManager(this.repos, executor, this.events, this.logger);
   }
@@ -290,6 +292,12 @@ export class Engine {
     };
     validateWorkflow(remainingWorkflow);
 
+    const parentArtifacts = repos.artifacts.list({ run_id: parentRun.id });
+    const initialArtifacts = buildInitialArtifactsFromParent(
+      parentArtifacts,
+      workflow.steps.slice(0, stepIndex + 1)
+    );
+
     const run = runManager.startRun({
       project_id: parentRun.project_id,
       chat_id: parentRun.chat_id,
@@ -309,7 +317,7 @@ export class Engine {
           timestamp: this.now()
         }
       ],
-      initialArtifacts: buildArtifactInputs(workflow.steps.slice(0, stepIndex + 1))
+      initialArtifacts
     });
 
     this.copyForkArtifacts(parentRun.id, run.id, workflow.steps.slice(0, stepIndex + 1));
@@ -520,7 +528,12 @@ export class Engine {
     return this.now().replace(/[:.]/g, "-");
   }
 
-  private ensureReady(): { repos: StorageRepos; runManager: RunManager; planner: Planner } {
+  private ensureReady(): {
+    repos: StorageRepos;
+    runManager: RunManager;
+    planner: Planner;
+    docs: DocsService;
+  } {
     if (!this.repos || !this.runManager || !this.planner || !this.docs) {
       throw new EngineError("ENGINE_NOT_READY", "Engine has not been started");
     }
@@ -543,4 +556,43 @@ function buildArtifactInputs(steps: WorkflowDefinition["steps"]): AdapterArtifac
     }
   }
   return [...types].map((type) => ({ type }));
+}
+
+function inferArtifactType(filePath: string, knownTypes: string[]): string | null {
+  const name = path.basename(filePath);
+  for (const type of knownTypes) {
+    const safeType = type.replace(/[\\/]/g, "_");
+    if (name.includes(type) || name.includes(safeType)) {
+      return type;
+    }
+  }
+  return null;
+}
+
+function buildInitialArtifactsFromParent(
+  parentArtifacts: Array<{ path: string; step_id?: string | null }>,
+  stepsToInclude: WorkflowDefinition["steps"]
+): AdapterArtifact[] {
+  const allowedStepIds = new Set(stepsToInclude.map((step) => step.id));
+  const knownTypes = Object.keys(listArtifactSchemas()).sort(
+    (a, b) => b.length - a.length
+  );
+  const artifacts: AdapterArtifact[] = [];
+
+  for (const artifact of parentArtifacts) {
+    if (artifact.step_id && !allowedStepIds.has(artifact.step_id)) {
+      continue;
+    }
+    const inferred = inferArtifactType(artifact.path, knownTypes);
+    if (!inferred) {
+      continue;
+    }
+    artifacts.push({ type: inferred, path: artifact.path });
+  }
+
+  if (artifacts.length > 0) {
+    return artifacts;
+  }
+
+  return buildArtifactInputs(stepsToInclude);
 }

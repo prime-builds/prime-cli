@@ -1,0 +1,40 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "source_artifacts": ["web_surface.json"],
+  "candidates": [
+    {
+      "id": "cand_001",
+      "type": "missing_security_headers",
+      "title": "Missing common security headers",
+      "description": "Missing headers: strict-transport-security.",
+      "evidence": [{ "kind": "header", "value": "missing: strict-transport-security" }],
+      "confidence": "high",
+      "severity_hint": "medium",
+      "tags": ["headers"],
+      "refs": []
+    },
+    {
+      "id": "cand_002",
+      "type": "exposure_hints_detected",
+      "title": "Exposure hints detected",
+      "description": "Robots or sitemap references were discovered.",
+      "evidence": [{ "kind": "url", "value": "https://example.com/robots.txt" }],
+      "confidence": "low",
+      "severity_hint": "info",
+      "tags": ["exposure"],
+      "refs": []
+    },
+    {
+      "id": "cand_003",
+      "type": "directory_listing_indicator",
+      "title": "Directory listing indicator",
+      "description": "Response content indicates a possible directory listing.",
+      "evidence": [{ "kind": "html", "value": "directory listing indicator" }],
+      "confidence": "medium",
+      "severity_hint": "high",
+      "tags": ["directory-listing"],
+      "refs": []
+    }
+  ]
+}

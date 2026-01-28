@@ -1,0 +1,6 @@
+{
+  "target": "https://example.com",
+  "ruleset": "baseline",
+  "max_candidates": 50,
+  "include_kb_refs": false
+}

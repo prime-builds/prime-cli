@@ -50,6 +50,29 @@ export interface AdapterExecutionContext {
   evidence_dir?: string;
   run_id?: string;
   step_id?: string;
+  project_id?: string;
+  mission?: {
+    objective: string;
+    scope_targets: string[];
+  };
+  docs_search?: (input: {
+    query: string;
+    top_k?: number;
+    filter?: {
+      tool_name?: string;
+      category?: string;
+    };
+  }) => {
+    results: Array<{
+      doc_id: string;
+      chunk_id: string;
+      snippet: string;
+      file_name: string;
+      tool_name?: string;
+      category?: string;
+      score?: number;
+    }>;
+  };
   signal?: AbortSignal;
 }
 

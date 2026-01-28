@@ -132,6 +132,9 @@ export class RunManager {
         throw new RunCanceledError();
       }
 
+      const mission =
+        run.chat_id ? this.repos.missions.getByChatId(run.chat_id) : null;
+
       this.emit({
         type: "RUN_STARTED",
         run_id: run.id,
@@ -179,6 +182,9 @@ export class RunManager {
             chat_id: run.chat_id,
             available_artifacts: availableArtifacts,
             scope_targets: workflow.scope?.targets,
+            mission: mission
+              ? { objective: mission.objective, scope_targets: mission.scope_targets }
+              : undefined,
             signal,
             emitLog: (message, level) => {
               this.emit({

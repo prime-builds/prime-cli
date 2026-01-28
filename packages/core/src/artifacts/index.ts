@@ -1,6 +1,13 @@
 export type {
   ArtifactSchemas,
+  FindingCandidate,
+  FindingEvidence,
+  FindingRef,
+  FindingsCandidatesArtifact,
+  FindingsTriagedArtifact,
   JSONSchema,
+  ReportArtifact,
+  TriagedFinding,
   WebSurfaceArtifact,
   WebSurfaceEvidence,
   WebSurfaceForm,

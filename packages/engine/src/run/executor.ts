@@ -5,6 +5,7 @@ import type { Artifact, Run } from "../../../shared/src/contracts";
 import type { AdapterRegistry } from "../adapters/registry";
 import { AdapterNotFoundError, RunCanceledError, ValidationError } from "../errors";
 import { Logger } from "../logger";
+import type { DocsService } from "../docs";
 import type { ArtifactsRepo } from "../storage/repos/artifacts";
 import type { EvidenceRepo } from "../storage/repos/evidence";
 import type { WorkflowStep } from "./workflow";
@@ -19,6 +20,7 @@ export interface StepExecutionContext {
   chat_id?: string;
   available_artifacts: AdapterArtifact[];
   scope_targets?: string[];
+  mission?: { objective: string; scope_targets: string[] };
   signal: AbortSignal;
   emitLog: (message: string, level?: "debug" | "info" | "warn" | "error") => void;
   emitArtifact: (artifact: Artifact, stepId: string) => void;
@@ -36,19 +38,22 @@ export class Executor {
   private readonly evidenceRepo: EvidenceRepo;
   private readonly registry: AdapterRegistry;
   private readonly logger: Logger;
+  private readonly docs?: DocsService;
 
   constructor(
     artifactsDir: string,
     artifactsRepo: ArtifactsRepo,
     evidenceRepo: EvidenceRepo,
     registry: AdapterRegistry,
-    logger: Logger
+    logger: Logger,
+    docs?: DocsService
   ) {
     this.artifactsDir = artifactsDir;
     this.artifactsRepo = artifactsRepo;
     this.evidenceRepo = evidenceRepo;
     this.registry = registry;
     this.logger = logger;
+    this.docs = docs;
   }
 
   async executeStep(context: StepExecutionContext): Promise<StepExecutionResult> {
@@ -90,6 +95,17 @@ export class Executor {
       evidence_dir: evidenceDir,
       run_id: context.run.id,
       step_id: context.step.id,
+      project_id: context.project_id,
+      mission: context.mission,
+      docs_search: this.docs
+        ? (input) =>
+            this.docs.searchDocs({
+              project_id: context.project_id,
+              query: input.query,
+              top_k: input.top_k,
+              filter: input.filter
+            })
+        : undefined,
       signal: context.signal
     };
 
@@ -110,7 +126,11 @@ export class Executor {
     for (const [index, output] of result.artifacts.entries()) {
       const stored = this.persistArtifact(context, output, runDir, index);
       persistedArtifacts.push(stored);
-      adapterArtifacts.push({ type: output.type });
+      adapterArtifacts.push({
+        type: output.type,
+        path: stored.path,
+        content_json: output.content_json
+      });
       context.emitArtifact(stored, context.step.id);
 
       if (output.content_json !== undefined) {
@@ -250,15 +270,21 @@ function enforceTargetScope(step: WorkflowStep, scopeTargets?: string[]): void {
   if (!step.params || typeof step.params !== "object") {
     return;
   }
-  const targetUrl = (step.params as { target_url?: unknown }).target_url;
-  if (typeof targetUrl !== "string") {
+  const params = step.params as { target_url?: unknown; target?: unknown };
+  const targetUrl =
+    typeof params.target_url === "string"
+      ? params.target_url
+      : typeof params.target === "string"
+        ? params.target
+        : undefined;
+  if (!targetUrl) {
     return;
   }
   if (!scopeTargets || scopeTargets.length === 0) {
-    throw new ValidationError("scope.targets is required when target_url is set");
+    throw new ValidationError("scope.targets is required when target is set");
   }
   if (!scopeTargets.includes(targetUrl)) {
-    throw new ValidationError(`target_url must be one of scope.targets`);
+    throw new ValidationError(`target must be one of scope.targets`);
   }
 }
 
@@ -289,6 +315,9 @@ function guessMediaType(filePath: string): string {
   }
   if (filePath.endsWith(".html")) {
     return "text/html";
+  }
+  if (filePath.endsWith(".md")) {
+    return "text/markdown";
   }
   return "application/octet-stream";
 }

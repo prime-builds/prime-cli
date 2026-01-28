@@ -1,0 +1,18 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2025-01-02T00:00:00Z",
+  "source_artifacts": ["web_surface.json"],
+  "candidates": [
+    {
+      "id": "cand_001",
+      "type": "missing_security_headers",
+      "title": "Missing common security headers",
+      "description": "Missing headers: strict-transport-security.",
+      "evidence": [{ "kind": "header", "value": "missing: strict-transport-security" }],
+      "confidence": "high",
+      "severity_hint": "medium",
+      "tags": ["headers"],
+      "refs": []
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target", "timestamp", "artifacts", "report_path"],
+  "properties": {
+    "target": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "report_path": { "type": "string" }
+  }
+}
