@@ -42,9 +42,13 @@ export class RunManager {
     parent_run_id?: string;
     forked_from_step_id?: string;
     replay_of_run_id?: string;
+    planner_provider_id?: string;
+    planner_model_name?: string;
     planner_prompt_version?: string;
     critic_prompt_version?: string;
     planner_latency_ms?: number;
+    planner_tokens_in?: number;
+    planner_tokens_out?: number;
     tokens_estimate?: number;
     initialEvents?: (run: Run) => RunEvent[];
     initialArtifacts?: AdapterArtifact[];
@@ -60,9 +64,13 @@ export class RunManager {
       parent_run_id: input.parent_run_id ?? null,
       forked_from_step_id: input.forked_from_step_id ?? null,
       replay_of_run_id: input.replay_of_run_id ?? null,
+      planner_provider_id: input.planner_provider_id ?? null,
+      planner_model_name: input.planner_model_name ?? null,
       planner_prompt_version: input.planner_prompt_version ?? null,
       critic_prompt_version: input.critic_prompt_version ?? null,
       planner_latency_ms: input.planner_latency_ms ?? null,
+      planner_tokens_in: input.planner_tokens_in ?? null,
+      planner_tokens_out: input.planner_tokens_out ?? null,
       tokens_estimate: input.tokens_estimate ?? null
     });
 

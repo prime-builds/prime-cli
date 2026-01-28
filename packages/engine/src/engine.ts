@@ -66,7 +66,9 @@ import { EngineError, NotFoundError, ValidationError } from "./errors";
 import type { EngineConfig } from "./config";
 import { Logger } from "./logger";
 import { PromptLoader } from "./prompts/loader";
-import { Planner } from "./planner";
+import { PlannerService } from "./planner/service";
+import { LocalPlannerProvider } from "./planner/providers/local";
+import { HostedPlannerProvider } from "./planner/providers/hosted";
 import { Executor } from "./run/executor";
 import { RunEventHub } from "./run/event-hub";
 import { RunManager } from "./run/run-manager";
@@ -86,7 +88,7 @@ export class Engine {
   private db?: Database.Database;
   private repos?: StorageRepos;
   private runManager?: RunManager;
-  private planner?: Planner;
+  private planner?: PlannerService;
   private docs?: DocsService;
 
   constructor(
@@ -120,7 +122,25 @@ export class Engine {
     this.docs = new DocsService(this.repos, this.logger);
 
     const promptLoader = new PromptLoader(this.promptsDir, this.logger);
-    this.planner = new Planner(promptLoader, this.registry, this.docs, this.logger);
+    const providers = [new LocalPlannerProvider(), new HostedPlannerProvider()];
+    const plannerProviderId = this.config.plannerProvider?.id ?? "local.heuristic";
+    const plannerProviderSettings = {
+      prompt_version: this.plannerPromptVersion,
+      ...(this.config.plannerProvider?.settings ?? {})
+    };
+    this.planner = new PlannerService({
+      providers,
+      registry: this.registry,
+      docs: this.docs,
+      repos: this.repos,
+      logger: this.logger,
+      promptVersion: this.plannerPromptVersion,
+      selectedProviderId: plannerProviderId,
+      enableCritic: this.config.plannerProvider?.enableCritic ?? false,
+      providerSettings: plannerProviderSettings
+    });
+    promptLoader.loadPlannerPrompt();
+    promptLoader.loadCriticPrompt();
     const executor = new Executor(
       this.config.artifactsDir,
       this.repos.artifacts,
@@ -224,7 +244,7 @@ export class Engine {
     }
 
     const mission = this.ensureMissionManifest(chat.id, request.message);
-    const workflow = planner.plan({
+    const { workflow, telemetry } = await planner.planForMessage({
       project_id: chat.project_id,
       chat_id: chat.id,
       message: request.message,
@@ -238,8 +258,17 @@ export class Engine {
       project_root: repos.projects.getById(chat.project_id)?.root_path ?? "",
       workflow,
       workflowJson: JSON.stringify(workflow),
-      planner_prompt_version: this.plannerPromptVersion,
-      critic_prompt_version: this.criticPromptVersion
+      planner_provider_id: telemetry.provider_id,
+      planner_model_name: telemetry.model_name,
+      planner_prompt_version: telemetry.prompt_version ?? this.plannerPromptVersion,
+      critic_prompt_version: this.criticPromptVersion,
+      planner_latency_ms: telemetry.latency_ms,
+      planner_tokens_in: telemetry.tokens_in,
+      planner_tokens_out: telemetry.tokens_out,
+      tokens_estimate:
+        telemetry.tokens_in !== undefined && telemetry.tokens_out !== undefined
+          ? telemetry.tokens_in + telemetry.tokens_out
+          : undefined
     });
 
     return { message, run };
@@ -572,7 +601,7 @@ export class Engine {
   private ensureReady(): {
     repos: StorageRepos;
     runManager: RunManager;
-    planner: Planner;
+    planner: PlannerService;
     docs: DocsService;
   } {
     if (!this.repos || !this.runManager || !this.planner || !this.docs) {

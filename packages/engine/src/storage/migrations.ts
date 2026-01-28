@@ -188,6 +188,23 @@ const migrations: Migration[] = [
         "CREATE INDEX IF NOT EXISTS idx_doc_chunks_doc_id ON doc_chunks(doc_id)"
       );
     }
+  },
+  {
+    id: "0007",
+    name: "planner-provider-telemetry",
+    up: (db) => {
+      const columns = [
+        { name: "planner_provider_id", type: "TEXT" },
+        { name: "planner_model_name", type: "TEXT" },
+        { name: "planner_tokens_in", type: "INTEGER" },
+        { name: "planner_tokens_out", type: "INTEGER" }
+      ];
+      for (const column of columns) {
+        if (!columnExists(db, "runs", column.name)) {
+          db.exec(`ALTER TABLE runs ADD COLUMN ${column.name} ${column.type}`);
+        }
+      }
+    }
   }
 ];
 

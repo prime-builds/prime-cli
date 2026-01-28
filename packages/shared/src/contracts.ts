@@ -43,9 +43,13 @@ export interface Run {
   parent_run_id?: ID;
   forked_from_step_id?: string;
   replay_of_run_id?: ID;
+  planner_provider_id?: string;
+  planner_model_name?: string;
   planner_prompt_version?: string;
   critic_prompt_version?: string;
   planner_latency_ms?: number;
+  planner_tokens_in?: number;
+  planner_tokens_out?: number;
   tokens_estimate?: number;
 }
 

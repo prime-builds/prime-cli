@@ -17,9 +17,13 @@ type RunRow = {
   parent_run_id: string | null;
   forked_from_step_id: string | null;
   replay_of_run_id: string | null;
+  planner_provider_id: string | null;
+  planner_model_name: string | null;
   planner_prompt_version: string | null;
   critic_prompt_version: string | null;
   planner_latency_ms: number | null;
+  planner_tokens_in: number | null;
+  planner_tokens_out: number | null;
   tokens_estimate: number | null;
 };
 
@@ -40,9 +44,13 @@ export class RunsRepo {
     parent_run_id?: string | null;
     forked_from_step_id?: string | null;
     replay_of_run_id?: string | null;
+    planner_provider_id?: string | null;
+    planner_model_name?: string | null;
     planner_prompt_version?: string | null;
     critic_prompt_version?: string | null;
     planner_latency_ms?: number | null;
+    planner_tokens_in?: number | null;
+    planner_tokens_out?: number | null;
     tokens_estimate?: number | null;
   }): Run {
     const id = newId();
@@ -53,8 +61,10 @@ export class RunsRepo {
         `INSERT INTO runs
         (id, project_id, chat_id, workflow_id, workflow_json, status, created_at, started_at,
          parent_run_id, forked_from_step_id, replay_of_run_id,
-         planner_prompt_version, critic_prompt_version, planner_latency_ms, tokens_estimate)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         planner_provider_id, planner_model_name,
+         planner_prompt_version, critic_prompt_version, planner_latency_ms,
+         planner_tokens_in, planner_tokens_out, tokens_estimate)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
@@ -68,9 +78,13 @@ export class RunsRepo {
         input.parent_run_id ?? null,
         input.forked_from_step_id ?? null,
         input.replay_of_run_id ?? null,
+        input.planner_provider_id ?? null,
+        input.planner_model_name ?? null,
         input.planner_prompt_version ?? null,
         input.critic_prompt_version ?? null,
         input.planner_latency_ms ?? null,
+        input.planner_tokens_in ?? null,
+        input.planner_tokens_out ?? null,
         input.tokens_estimate ?? null
       );
     return {
@@ -84,9 +98,13 @@ export class RunsRepo {
       parent_run_id: input.parent_run_id ?? undefined,
       forked_from_step_id: input.forked_from_step_id ?? undefined,
       replay_of_run_id: input.replay_of_run_id ?? undefined,
+      planner_provider_id: input.planner_provider_id ?? undefined,
+      planner_model_name: input.planner_model_name ?? undefined,
       planner_prompt_version: input.planner_prompt_version ?? undefined,
       critic_prompt_version: input.critic_prompt_version ?? undefined,
       planner_latency_ms: input.planner_latency_ms ?? undefined,
+      planner_tokens_in: input.planner_tokens_in ?? undefined,
+      planner_tokens_out: input.planner_tokens_out ?? undefined,
       tokens_estimate: input.tokens_estimate ?? undefined
     };
   }
@@ -159,9 +177,13 @@ export class RunsRepo {
       parent_run_id: row.parent_run_id ?? undefined,
       forked_from_step_id: row.forked_from_step_id ?? undefined,
       replay_of_run_id: row.replay_of_run_id ?? undefined,
+      planner_provider_id: row.planner_provider_id ?? undefined,
+      planner_model_name: row.planner_model_name ?? undefined,
       planner_prompt_version: row.planner_prompt_version ?? undefined,
       critic_prompt_version: row.critic_prompt_version ?? undefined,
       planner_latency_ms: row.planner_latency_ms ?? undefined,
+      planner_tokens_in: row.planner_tokens_in ?? undefined,
+      planner_tokens_out: row.planner_tokens_out ?? undefined,
       tokens_estimate: row.tokens_estimate ?? undefined
     };
   }

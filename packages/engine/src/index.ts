@@ -22,7 +22,21 @@ if (require.main === module) {
       path.resolve(process.cwd(), "artifacts");
     const logLevel = (process.env.PRIME_LOG_LEVEL ?? "info") as EngineConfig["logLevel"];
     const logger = new Logger(logLevel);
-    const engine = new Engine({ dbPath, artifactsDir, logLevel }, { logger });
+    const plannerProviderId = process.env.PRIME_PLANNER_PROVIDER ?? "local.heuristic";
+    const plannerProvider = {
+      id: plannerProviderId,
+      settings: {
+        endpoint: process.env.PRIME_PLANNER_ENDPOINT,
+        api_key: process.env.PRIME_PLANNER_API_KEY,
+        model_name: process.env.PRIME_PLANNER_MODEL,
+        prompt_version: "planner-v1"
+      },
+      enableCritic: process.env.PRIME_PLANNER_CRITIC === "1"
+    };
+    const engine = new Engine(
+      { dbPath, artifactsDir, logLevel, plannerProvider },
+      { logger }
+    );
     await engine.start();
 
     logger.info("Engine started", { dbPath, artifactsDir });

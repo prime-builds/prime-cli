@@ -1,0 +1,53 @@
+{
+  "project_id": "proj-1",
+  "chat_id": "chat-1",
+  "message": { "role": "user", "content": "Run a web assessment report" },
+  "mission_manifest": {
+    "objective": "Assess the web surface",
+    "scope_targets": ["https://example.com"]
+  },
+  "adapter_capabilities": [
+    {
+      "id": "web.surface.discover.http",
+      "name": "Web Surface Discovery",
+      "category": "web",
+      "description": "Discover surface URLs",
+      "risk_default": "passive",
+      "inputs": [],
+      "outputs": ["web_surface.json"],
+      "params_summary": []
+    },
+    {
+      "id": "findings.candidates.from_web_surface",
+      "name": "Findings Candidates",
+      "category": "analysis",
+      "description": "Generate candidate findings",
+      "risk_default": "passive",
+      "inputs": ["web_surface.json"],
+      "outputs": ["findings_candidates.json"],
+      "params_summary": []
+    },
+    {
+      "id": "findings.triage.rulebased",
+      "name": "Findings Triage",
+      "category": "analysis",
+      "description": "Triage findings",
+      "risk_default": "passive",
+      "inputs": ["findings_candidates.json"],
+      "outputs": ["findings_triaged.json"],
+      "params_summary": []
+    },
+    {
+      "id": "report.generate.markdown",
+      "name": "Report Generator",
+      "category": "reporting",
+      "description": "Generate markdown report",
+      "risk_default": "passive",
+      "inputs": ["web_surface.json", "findings_triaged.json"],
+      "outputs": ["report.json"],
+      "params_summary": []
+    }
+  ],
+  "artifacts": [],
+  "retrieved_snippets": []
+}
