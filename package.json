@@ -2,7 +2,8 @@
   "name": "prime-cli",
   "private": true,
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "engine:headless": "tsx packages/engine/src/index.ts",
@@ -12,7 +13,9 @@
     "adapter:test": "tsx packages/engine/src/adapters/testing/cli.ts",
     "adapter:new": "tsx packages/engine/src/cli/adapter.ts",
     "docs:import": "tsx packages/engine/src/cli/docs.ts import",
-    "docs:search": "tsx packages/engine/src/cli/docs.ts search"
+    "docs:search": "tsx packages/engine/src/cli/docs.ts search",
+    "desktop:dev": "npm --workspace apps/desktop run dev",
+    "desktop:build": "npm --workspace apps/desktop run build"
   },
   "dependencies": {
     "ajv": "^8.12.0",
