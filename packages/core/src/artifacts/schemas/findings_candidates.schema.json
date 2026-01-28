@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target", "timestamp", "source_artifacts", "candidates"],
+  "properties": {
+    "target": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "source_artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "title",
+          "description",
+          "evidence",
+          "confidence",
+          "severity_hint",
+          "tags",
+          "refs"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "value"],
+              "properties": {
+                "kind": { "enum": ["url", "header", "html", "text"] },
+                "value": { "type": "string" },
+                "path": { "type": "string" }
+              }
+            }
+          },
+          "confidence": { "enum": ["low", "medium", "high"] },
+          "severity_hint": { "enum": ["info", "low", "medium", "high"] },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "doc_id", "chunk_id"],
+              "properties": {
+                "source": { "enum": ["kb"] },
+                "doc_id": { "type": "string" },
+                "chunk_id": { "type": "string" },
+                "label": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

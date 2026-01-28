@@ -1,11 +1,17 @@
 import Ajv from "ajv/dist/2020";
 import type { ArtifactSchemas, JSONSchema } from "./types";
 import webSurfaceSchema from "./schemas/web_surface.schema.json";
+import findingsCandidatesSchema from "./schemas/findings_candidates.schema.json";
+import findingsTriagedSchema from "./schemas/findings_triaged.schema.json";
+import reportSchema from "./schemas/report.schema.json";
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 
 const schemas: ArtifactSchemas = {
-  "web_surface.json": webSurfaceSchema as JSONSchema
+  "web_surface.json": webSurfaceSchema as JSONSchema,
+  "findings_candidates.json": findingsCandidatesSchema as JSONSchema,
+  "findings_triaged.json": findingsTriagedSchema as JSONSchema,
+  "report.json": reportSchema as JSONSchema
 };
 
 const validators = new Map<string, ReturnType<typeof ajv.compile>>();

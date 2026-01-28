@@ -34,4 +34,64 @@ export interface WebSurfaceArtifact {
   evidence?: WebSurfaceEvidence[];
 }
 
+export type FindingEvidence = {
+  kind: "url" | "header" | "html" | "text";
+  value: string;
+  path?: string;
+};
+
+export type FindingRef = {
+  source: "kb";
+  doc_id: string;
+  chunk_id: string;
+  label?: string;
+};
+
+export type FindingCandidate = {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  evidence: FindingEvidence[];
+  confidence: "low" | "medium" | "high";
+  severity_hint: "info" | "low" | "medium" | "high";
+  tags: string[];
+  refs: FindingRef[];
+};
+
+export type FindingsCandidatesArtifact = {
+  target: string;
+  timestamp: string;
+  source_artifacts: string[];
+  candidates: FindingCandidate[];
+};
+
+export type TriagedFinding = {
+  candidate_id: string;
+  decision: "keep" | "drop" | "needs_review";
+  severity: "info" | "low" | "medium" | "high";
+  rationale: string;
+  tags: string[];
+  refs: FindingRef[];
+};
+
+export type FindingsTriagedArtifact = {
+  target: string;
+  timestamp: string;
+  source_artifacts: string[];
+  triaged: TriagedFinding[];
+  summary: {
+    kept: number;
+    dropped: number;
+    needs_review: number;
+  };
+};
+
+export type ReportArtifact = {
+  target: string;
+  timestamp: string;
+  artifacts: string[];
+  report_path: string;
+};
+
 export type ArtifactSchemas = Record<string, JSONSchema>;
