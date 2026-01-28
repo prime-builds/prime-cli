@@ -35,6 +35,12 @@ printed by `npm run adapters:check` and `npm run adapters:test`.
 The built-in `web.surface.discover.http` adapter performs passive HTTP surface
 discovery and produces a `web_surface.json` artifact plus evidence references.
 
+## Findings Pipeline Adapters
+Analysis-only adapters for deterministic reporting:
+- `findings.candidates.from_web_surface` -> `findings_candidates.json`
+- `findings.triage.rulebased` -> `findings_triaged.json`
+- `report.generate.markdown` -> `report.json` + `report.md`
+
 ## Local Adapters
 Place a local adapter under `<ProjectRoot>/local_adapters/<adapterId>/` with
 `manifest.ts`, `adapter.ts`, and fixtures. The registry loads them dynamically,

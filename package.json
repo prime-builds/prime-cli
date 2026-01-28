@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "engine:headless": "tsx packages/engine/src/index.ts",
-    "test:engine": "tsx --test packages/engine/test/engine.test.ts packages/engine/test/adapter-registry.test.ts packages/engine/test/web-surface-adapter.test.ts packages/engine/test/knowledge-base.test.ts",
+    "test:engine": "tsx --test packages/engine/test/engine.test.ts packages/engine/test/adapter-registry.test.ts packages/engine/test/web-surface-adapter.test.ts packages/engine/test/knowledge-base.test.ts packages/engine/test/findings-pipeline.test.ts",
     "adapters:check": "tsx packages/engine/src/adapters/conformance/cli.ts",
     "adapters:test": "tsx packages/engine/src/adapters/testing/cli.ts",
     "adapter:test": "tsx packages/engine/src/adapters/testing/cli.ts",

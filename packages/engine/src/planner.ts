@@ -70,11 +70,115 @@ export class Planner {
       };
     }
 
-    const shouldDiscoverWeb = wantsWebDiscovery(input.message.content);
     const targetUrl = input.mission.scope_targets[0];
     const webAdapter = context.adapter_capabilities.find(
       (summary) => summary.id === "web.surface.discover.http"
     );
+    const candidatesAdapter = context.adapter_capabilities.find(
+      (summary) => summary.id === "findings.candidates.from_web_surface"
+    );
+    const triageAdapter = context.adapter_capabilities.find(
+      (summary) => summary.id === "findings.triage.rulebased"
+    );
+    const reportAdapter = context.adapter_capabilities.find(
+      (summary) => summary.id === "report.generate.markdown"
+    );
+
+    const wantsAssessmentFlow = wantsAssessment(input.message.content);
+    const hasFindingsPipeline = Boolean(
+      candidatesAdapter && triageAdapter && reportAdapter
+    );
+
+    if (wantsAssessmentFlow && hasFindingsPipeline && targetUrl) {
+      const steps = [];
+      if (webAdapter) {
+        steps.push({
+          id: "step-1",
+          adapter: webAdapter.id,
+          category: webAdapter.category,
+          risk: webAdapter.risk_default,
+          inputs: {
+            mission: {
+              objective: context.mission_manifest.objective,
+              scope_targets: context.mission_manifest.scope_targets
+            }
+          },
+          outputs: {
+            "web_surface.json": {}
+          },
+          limits: {},
+          params: {
+            target_url: targetUrl
+          }
+        });
+      }
+
+      steps.push({
+        id: webAdapter ? "step-2" : "step-1",
+        adapter: candidatesAdapter.id,
+        category: candidatesAdapter.category,
+        risk: candidatesAdapter.risk_default,
+        inputs: {
+          mission: {
+            objective: context.mission_manifest.objective,
+            scope_targets: context.mission_manifest.scope_targets
+          }
+        },
+        outputs: {
+          "findings_candidates.json": {}
+        },
+        limits: {},
+        params: {
+          target: targetUrl,
+          ruleset: "baseline",
+          max_candidates: 50,
+          include_kb_refs: true
+        }
+      });
+
+      steps.push({
+        id: webAdapter ? "step-3" : "step-2",
+        adapter: triageAdapter.id,
+        category: triageAdapter.category,
+        risk: triageAdapter.risk_default,
+        inputs: {},
+        outputs: {
+          "findings_triaged.json": {}
+        },
+        limits: {},
+        params: {
+          triage_mode: "balanced",
+          max_kept: 30
+        }
+      });
+
+      steps.push({
+        id: webAdapter ? "step-4" : "step-3",
+        adapter: reportAdapter.id,
+        category: reportAdapter.category,
+        risk: reportAdapter.risk_default,
+        inputs: {},
+        outputs: {
+          "report.json": {}
+        },
+        limits: {},
+        params: {
+          template: "default",
+          include_evidence_links: true,
+          include_kb_citations: true
+        }
+      });
+
+      return {
+        workflow_id: newId(),
+        project_id: input.project_id,
+        chat_id: input.chat_id,
+        scope: { targets: input.mission.scope_targets },
+        steps
+      };
+    }
+
+    const shouldDiscoverWeb = wantsWebDiscovery(input.message.content);
     if (shouldDiscoverWeb && webAdapter && targetUrl) {
       return {
         workflow_id: newId(),
@@ -207,6 +311,18 @@ function wantsWebDiscovery(message: string): boolean {
     text.includes("url discovery") ||
     text.includes("discover urls") ||
     text.includes("crawl")
+  );
+}
+
+function wantsAssessment(message: string): boolean {
+  const text = message.toLowerCase();
+  return (
+    text.includes("assessment") ||
+    text.includes("analyze") ||
+    text.includes("analysis") ||
+    text.includes("find issues") ||
+    text.includes("report") ||
+    text.includes("audit")
   );
 }
 

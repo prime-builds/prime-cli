@@ -1,5 +1,5 @@
 
-# Prime CLI — Execution Model
+# Prime CLI - Execution Model
 
 ## Engine Responsibilities
 - Validate workflows against DSL schema
@@ -43,3 +43,12 @@ Each run records:
 - Planner prompt version
 - Critic prompt version
 - Latency and token estimates
+
+## Findings Pipeline (Analysis-Only)
+Prime CLI supports a deterministic analysis pipeline:
+- `web_surface.json` -> `findings_candidates.json`
+- `findings_candidates.json` -> `findings_triaged.json`
+- `findings_triaged.json` -> `report.md` (with `report.json` metadata)
+
+The pipeline produces candidate hypotheses, applies rule-based triage, and
+generates a Markdown report with evidence references and optional KB citations.

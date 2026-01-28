@@ -1,5 +1,5 @@
 
-# Prime CLI — Storage Model
+# Prime CLI - Storage Model
 
 ## Philosophy
 - Files live on disk.
@@ -48,6 +48,10 @@ Stored as a dedicated table, one per chat.
 - `docs` stores document metadata (paths, hashes, tags)
 - `doc_chunks` stores extracted text segments
 - `doc_chunks_fts` provides full-text search over chunks
+
+## Reports
+- Reports are written under `<ProjectRoot>/reports/<run_id>/report.md`
+- `report.json` metadata artifacts register report paths in SQLite
 
 ## Versioning
 Artifact edits preserve prior versions via backup files.
