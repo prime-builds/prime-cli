@@ -29,6 +29,10 @@ import type {
   MissionManifest,
   MissionSetRequest,
   MissionSetResponse,
+  AdaptersListRequest,
+  AdaptersListResponse,
+  ChatMessagesRequest,
+  ChatMessagesResponse,
   ProjectCreateRequest,
   ProjectCreateResponse,
   ProjectListRequest,
@@ -42,6 +46,10 @@ import type {
   RunForkResponse,
   RunReplayRequest,
   RunReplayResponse,
+  RunListRequest,
+  RunListResponse,
+  RunStepsRequest,
+  RunStepsResponse,
   RunStartRequest,
   RunStartResponse
 } from "../../shared/src/contracts";
@@ -52,6 +60,7 @@ import {
   FileSystemAdapterRegistry,
   type AdapterRegistry
 } from "./adapters/registry";
+import { buildAdapterSummaries } from "./adapters/summary";
 import { DocsService } from "./docs";
 import { EngineError, NotFoundError, ValidationError } from "./errors";
 import type { EngineConfig } from "./config";
@@ -194,6 +203,13 @@ export class Engine {
     return { chats: repos.chats.listByProject(request.project_id) };
   }
 
+  async listChatMessages(
+    request: ChatMessagesRequest
+  ): Promise<ChatMessagesResponse> {
+    const { repos } = this.ensureReady();
+    return { messages: repos.messages.listByChat(request.chat_id) };
+  }
+
   async sendMessage(request: ChatSendMessageRequest): Promise<ChatSendMessageResponse> {
     const { repos, planner, runManager } = this.ensureReady();
     const chat = repos.chats.getById(request.chat_id);
@@ -253,6 +269,22 @@ export class Engine {
       critic_prompt_version: this.criticPromptVersion
     });
     return { run };
+  }
+
+  async listRuns(request: RunListRequest): Promise<RunListResponse> {
+    const { repos } = this.ensureReady();
+    if (request.chat_id) {
+      return { runs: repos.runs.listByChat(request.chat_id) };
+    }
+    if (request.project_id) {
+      return { runs: repos.runs.listByProject(request.project_id) };
+    }
+    return { runs: [] };
+  }
+
+  async listRunSteps(request: RunStepsRequest): Promise<RunStepsResponse> {
+    const { repos } = this.ensureReady();
+    return { steps: repos.steps.listByRun(request.run_id) };
   }
 
   async cancelRun(request: RunCancelRequest): Promise<RunCancelResponse> {
@@ -439,6 +471,15 @@ export class Engine {
   async openDoc(request: DocsOpenRequest): Promise<DocsOpenResponse> {
     const { docs } = this.ensureReady();
     return docs.openDoc(request);
+  }
+
+  async listAdapters(request: AdaptersListRequest): Promise<AdaptersListResponse> {
+    const { repos } = this.ensureReady();
+    const projectRoot = request.project_id
+      ? repos.projects.getById(request.project_id)?.root_path
+      : undefined;
+    const adapters = buildAdapterSummaries(this.registry.listAdapters(projectRoot));
+    return { adapters };
   }
 
   private resolveWorkflow(request: RunStartRequest): WorkflowDefinition {

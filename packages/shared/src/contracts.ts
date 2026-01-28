@@ -259,6 +259,31 @@ export interface ChatSendMessageResponse {
   run?: Run;
 }
 
+export interface ChatMessagesRequest {
+  chat_id: ID;
+}
+
+export interface ChatMessagesResponse {
+  messages: ChatMessage[];
+}
+
+export interface RunListRequest {
+  project_id?: ID;
+  chat_id?: ID;
+}
+
+export interface RunListResponse {
+  runs: Run[];
+}
+
+export interface RunStepsRequest {
+  run_id: ID;
+}
+
+export interface RunStepsResponse {
+  steps: RunStep[];
+}
+
 export interface RunStartRequest {
   project_id: ID;
   chat_id?: ID;
@@ -391,6 +416,33 @@ export interface DocsOpenResponse {
   absolute_path: string;
 }
 
+export interface AdapterParamSummary {
+  name: string;
+  type: string;
+  required: boolean;
+  enum?: unknown[];
+  description?: string;
+}
+
+export interface AdapterSummary {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  risk_default: "passive" | "active" | "destructive";
+  inputs: string[];
+  outputs: string[];
+  params_summary: AdapterParamSummary[];
+}
+
+export interface AdaptersListRequest {
+  project_id?: ID;
+}
+
+export interface AdaptersListResponse {
+  adapters: AdapterSummary[];
+}
+
 export interface MissionGetRequest {
   chat_id: ID;
 }
@@ -416,7 +468,10 @@ export interface IpcContracts {
   "mission.set": { request: MissionSetRequest; response: MissionSetResponse };
   "chat.create": { request: ChatCreateRequest; response: ChatCreateResponse };
   "chat.list": { request: ChatListRequest; response: ChatListResponse };
+  "chat.messages": { request: ChatMessagesRequest; response: ChatMessagesResponse };
   "chat.sendMessage": { request: ChatSendMessageRequest; response: ChatSendMessageResponse };
+  "run.list": { request: RunListRequest; response: RunListResponse };
+  "run.steps": { request: RunStepsRequest; response: RunStepsResponse };
   "run.start": { request: RunStartRequest; response: RunStartResponse };
   "run.cancel": { request: RunCancelRequest; response: RunCancelResponse };
   "run.fork": { request: RunForkRequest; response: RunForkResponse };
@@ -429,4 +484,5 @@ export interface IpcContracts {
   "docs.list": { request: DocsListRequest; response: DocsListResponse };
   "docs.search": { request: DocsSearchRequest; response: DocsSearchResponse };
   "docs.open": { request: DocsOpenRequest; response: DocsOpenResponse };
+  "adapters.list": { request: AdaptersListRequest; response: AdaptersListResponse };
 }
