@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "template": { "enum": ["default"], "default": "default" },
+    "include_evidence_links": { "type": "boolean", "default": true },
+    "include_kb_citations": { "type": "boolean", "default": true }
+  }
+}

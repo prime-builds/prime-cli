@@ -1,0 +1,5 @@
+{
+  "template": "default",
+  "include_evidence_links": true,
+  "include_kb_citations": true
+}

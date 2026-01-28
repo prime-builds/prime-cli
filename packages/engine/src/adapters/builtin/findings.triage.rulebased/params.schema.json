@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "triage_mode": { "enum": ["conservative", "balanced"], "default": "balanced" },
+    "keep_threshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "high": { "enum": ["keep", "needs_review", "drop"] },
+        "medium": { "enum": ["keep", "needs_review", "drop"] },
+        "low": { "enum": ["keep", "needs_review", "drop"] },
+        "info": { "enum": ["keep", "needs_review", "drop"] }
+      }
+    },
+    "max_kept": { "type": "integer", "minimum": 1, "default": 30 }
+  }
+}

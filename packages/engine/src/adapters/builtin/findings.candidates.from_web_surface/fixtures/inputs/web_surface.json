@@ -1,0 +1,30 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "urls": [
+    { "url": "https://example.com/", "method": "GET", "status": 200, "content_type": "text/html", "source": "seed" },
+    { "url": "https://example.com/admin", "source": "anchor" },
+    { "url": "https://example.com/robots.txt", "source": "anchor" },
+    { "url": "https://example.com/sitemap.xml", "source": "anchor" },
+    { "url": "http://example.com/insecure.js", "source": "script" },
+    { "url": "https://example.com/assets/app1.js", "source": "script" },
+    { "url": "https://example.com/assets/app2.js", "source": "script" },
+    { "url": "https://example.com/assets/app3.js", "source": "script" },
+    { "url": "https://example.com/assets/app4.js", "source": "script" },
+    { "url": "https://example.com/assets/app5.js", "source": "script" },
+    { "url": "https://example.com/assets/app6.js", "source": "script" },
+    { "url": "https://example.com/assets/app7.js", "source": "script" },
+    { "url": "https://example.com/assets/app8.js", "source": "script" },
+    { "url": "https://example.com/assets/app9.js", "source": "script" },
+    { "url": "https://example.com/assets/app10.js", "source": "script" }
+  ],
+  "forms": [
+    { "action": "https://example.com/login", "method": "POST" }
+  ],
+  "links": [
+    { "url": "http://example.com/insecure.css", "source": "link" }
+  ],
+  "evidence": [
+    { "kind": "http_response", "path": "fixtures/inputs/evidence/response-1.json", "description": "Response sample for https://example.com/" }
+  ]
+}

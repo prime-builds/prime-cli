@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target", "ruleset"],
+  "properties": {
+    "target": { "type": "string" },
+    "ruleset": { "enum": ["baseline"] },
+    "max_candidates": { "type": "integer", "minimum": 1, "default": 50 },
+    "include_kb_refs": { "type": "boolean", "default": true },
+    "kb_query_boost_terms": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
