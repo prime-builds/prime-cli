@@ -10,8 +10,7 @@ import { EmptyAdapterRegistry } from "../src/adapters/registry";
 import { createRepos } from "../src/storage";
 import { openDatabase } from "../src/storage/db";
 import { Logger } from "../src/logger";
-import { PromptLoader } from "../src/prompts/loader";
-import { Planner } from "../src/planner";
+import { buildPlannerContext } from "../src/planner/context";
 
 function createTempDir(label: string): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), `prime-cli-${label}-`));
@@ -95,12 +94,7 @@ test("docs import, search, and planner context includes snippets", async () => {
   const dbForPlanner = openDatabase(dbPath, logger);
   const repos = createRepos(dbForPlanner);
   const docsService = new DocsService(repos, logger);
-  const promptLoader = new PromptLoader(
-    path.resolve(process.cwd(), "docs", "prompts"),
-    logger
-  );
-  const planner = new Planner(promptLoader, new EmptyAdapterRegistry(), docsService, logger);
-  const context = planner.buildContext({
+  const context = buildPlannerContext({
     project_id: project.id,
     message: { role: "user", content: "Find adapter docs" },
     mission: {
@@ -110,7 +104,10 @@ test("docs import, search, and planner context includes snippets", async () => {
       scope_targets: ["docs"],
       created_at: new Date().toISOString()
     },
-    project_root: projectRoot
+    project_root: projectRoot,
+    repos,
+    docs: docsService,
+    registry: new EmptyAdapterRegistry()
   });
   assert.ok(context.retrieved_snippets.length > 0);
   dbForPlanner.close();
