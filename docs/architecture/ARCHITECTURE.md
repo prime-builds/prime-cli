@@ -1,16 +1,16 @@
 
-# Prime CLI — Architecture
+# Prime CLI - Architecture
 
 ## Overview
 Prime CLI is a local-first, enterprise-grade desktop research platform built with a strict separation between **planning** (LLM-driven) and **execution** (deterministic engine).
 
-The system follows a VS Code–style workspace model:
+The system follows a VS Code-style workspace model:
 - Projects contain multiple Chats, Runs, and Artifacts
 - The UI is a client over a long-running Engine process
 - Execution is isolated from reasoning
 
 ## Core Components
-- **Desktop UI (Electron Renderer)**: Displays projects, chats, runs, artifacts, and consoles.
+- **Desktop UI (Electron Renderer)**: Displays projects, chats, runs, artifacts, reports, and docs.
 - **Electron Main / Preload**: Typed IPC bridge with context isolation.
 - **Engine Process (Node.js)**:
   - Planning orchestration
@@ -44,3 +44,15 @@ Runs support:
 
 ## Event-Driven Execution
 The Engine emits a structured RunEvent stream consumed by the UI.
+
+## Desktop Cockpit Responsibilities
+- Project selection and chat navigation
+- Run orchestration, fork/replay controls, and live event streaming
+- Artifact browsing and JSON editing with audit events
+- Report viewing and docs search
+
+## IPC Boundary
+Renderer communicates with the Engine exclusively through typed IPC contracts:
+- Project, chat, mission, run, artifact, docs, and adapter APIs
+- Run events are streamed via a dedicated event channel
+- Renderer never receives Node.js access directly

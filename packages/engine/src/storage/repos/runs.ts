@@ -131,6 +131,20 @@ export class RunsRepo {
     return row?.workflow_json ?? null;
   }
 
+  listByProject(projectId: string): Run[] {
+    const rows = this.db
+      .prepare("SELECT * FROM runs WHERE project_id = ? ORDER BY created_at DESC")
+      .all(projectId) as RunRow[];
+    return rows.map((row) => this.toRun(row));
+  }
+
+  listByChat(chatId: string): Run[] {
+    const rows = this.db
+      .prepare("SELECT * FROM runs WHERE chat_id = ? ORDER BY created_at DESC")
+      .all(chatId) as RunRow[];
+    return rows.map((row) => this.toRun(row));
+  }
+
   private toRun(row: RunRow): Run {
     return {
       id: row.id,

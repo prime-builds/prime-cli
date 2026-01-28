@@ -61,8 +61,14 @@ export class EngineIpcServer {
         return this.engine.createChat(request.params);
       case "chat.list":
         return this.engine.listChats(request.params);
+      case "chat.messages":
+        return this.engine.listChatMessages(request.params);
       case "chat.sendMessage":
         return this.engine.sendMessage(request.params);
+      case "run.list":
+        return this.engine.listRuns(request.params);
+      case "run.steps":
+        return this.engine.listRunSteps(request.params);
       case "run.start":
         return this.engine.startRun(request.params);
       case "run.cancel":
@@ -87,6 +93,8 @@ export class EngineIpcServer {
         return this.engine.searchDocs(request.params);
       case "docs.open":
         return this.engine.openDoc(request.params);
+      case "adapters.list":
+        return this.engine.listAdapters(request.params);
       default:
         throw new EngineError("UNKNOWN_METHOD", `Unknown method: ${request.method}`);
     }

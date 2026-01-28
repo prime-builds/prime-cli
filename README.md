@@ -8,3 +8,8 @@
   - `npm run adapters:check`
   - `npm run adapters:test`
   - `npm run adapter:test -- --id <adapterId>`
+
+## Desktop
+
+- Dev: `npm run desktop:dev`
+- Build: `npm run desktop:build`
