@@ -205,6 +205,15 @@ const migrations: Migration[] = [
         }
       }
     }
+  },
+  {
+    id: "0008",
+    name: "artifact-trust-state",
+    up: (db) => {
+      if (!columnExists(db, "artifacts", "trust_state")) {
+        db.exec("ALTER TABLE artifacts ADD COLUMN trust_state TEXT DEFAULT 'trusted'");
+      }
+    }
   }
 ];
 

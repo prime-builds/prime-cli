@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
   path TEXT NOT NULL,
   media_type TEXT,
   size_bytes INTEGER,
+  trust_state TEXT NOT NULL DEFAULT 'trusted',
   created_at TEXT NOT NULL,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   FOREIGN KEY (run_id) REFERENCES runs(id) ON DELETE SET NULL,
