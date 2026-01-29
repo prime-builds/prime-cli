@@ -42,6 +42,38 @@ function createTestAdapter(id: string): AdapterDefinition {
   };
 }
 
+function createInvalidJsonAdapter(id: string): AdapterDefinition {
+  const manifest: AdapterManifest = {
+    id,
+    name: "Invalid JSON Adapter",
+    description: "Writes invalid JSON output",
+    category: "test",
+    risk_default: "passive",
+    version: "1.0.0",
+    inputs: [],
+    outputs: ["web_surface.json"],
+    params_schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+      required: []
+    }
+  };
+  return {
+    manifest,
+    execute: async (_params, _inputs, ctx) => {
+      const outputPath = path.join(ctx.artifacts_dir, "bad-output.json");
+      fs.writeFileSync(outputPath, "{invalid json", "utf8");
+      return {
+        logs: [{ level: "info", message: "wrote invalid json" }],
+        artifacts: [{ type: "web_surface.json", path: outputPath }]
+      };
+    },
+    runtime: createAdapterRuntime(manifest),
+    source: { kind: "builtin", path: "test" }
+  };
+}
+
 function openDb(dbPath: string): Database.Database {
   return new Database(dbPath);
 }
@@ -275,6 +307,68 @@ test("fork and replay preserve lineage, artifacts, and audit events", async () =
   assert.ok(forkEvents.includes("RUN_FORKED"));
   assert.ok(replayEvents.includes("RUN_REPLAYED"));
 
+  db.close();
+
+  await engine.stop();
+});
+
+test("parser repair marks artifacts untrusted on parse failure", async () => {
+  const tempDir = createTempDir("parser-repair");
+  const dbPath = path.join(tempDir, "engine.db");
+  const engine = new Engine(
+    {
+      dbPath,
+      artifactsDir: path.join(tempDir, "artifacts"),
+      logLevel: "error",
+      parserRepairMode: "store_untrusted"
+    },
+    {
+      adapterRegistry: new StaticAdapterRegistry([createInvalidJsonAdapter("invalid-json")])
+    }
+  );
+  await engine.start();
+
+  const { project } = await engine.createProject({
+    name: "Parser Repair Project",
+    root_path: "/tmp/project"
+  });
+  const { chat } = await engine.createChat({ project_id: project.id, title: "Chat" });
+  const workflow = {
+    workflow_id: "workflow-parser-repair",
+    project_id: project.id,
+    chat_id: chat.id,
+    scope: { targets: [] as string[] },
+    steps: [
+      {
+        id: "step-1",
+        adapter: "invalid-json",
+        category: "test",
+        risk: "low",
+        inputs: {},
+        outputs: { "web_surface.json": {} },
+        limits: {},
+        params: {}
+      }
+    ]
+  };
+
+  const { run } = await engine.startRun({
+    project_id: project.id,
+    chat_id: chat.id,
+    workflow_id: workflow.workflow_id,
+    inputs: { workflow }
+  });
+  await engine.waitForRun(run.id);
+
+  const { artifacts } = await engine.listArtifacts({ run_id: run.id });
+  assert.equal(artifacts.length, 1);
+  assert.equal(artifacts[0].trust_state, "untrusted");
+
+  const db = openDb(dbPath);
+  const rows = db
+    .prepare("SELECT kind FROM evidence WHERE artifact_id = ?")
+    .all(artifacts[0].id) as Array<{ kind: string }>;
+  assert.ok(rows.some((row) => row.kind === "parser_error"));
   db.close();
 
   await engine.stop();

@@ -28,6 +28,13 @@ Humans may edit artifacts mid-run:
 - Hash recomputed
 - ARTIFACT_EDITED event emitted
 
+## Parser Repair Mode
+If adapter output fails JSON parsing or schema validation:
+- Raw output remains on disk
+- Artifact is marked `untrusted`
+- A `parser_error` evidence record is stored
+- Runs fail fast to prevent propagating invalid artifacts
+
 ## Evidence and Raw Output
 Executors may write raw evidence for debugging:
 - Stored under `<ProjectRoot>/evidence/<run_id>/<step_id>/`
