@@ -1,0 +1,4 @@
+[
+  { "type": "findings_candidates.json", "path": "fixtures/inputs/findings_candidates.json" },
+  { "type": "findings_triaged.json", "path": "fixtures/inputs/findings_triaged.json" }
+]
