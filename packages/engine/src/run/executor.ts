@@ -10,7 +10,7 @@ import type { ArtifactsRepo } from "../storage/repos/artifacts";
 import type { EvidenceRepo } from "../storage/repos/evidence";
 import type { WorkflowStep } from "./workflow";
 import type { AdapterArtifact, AdapterExecutionContext } from "../../../core/src/adapters";
-import { validateArtifactContent } from "../../../core/src/artifacts";
+import { getArtifactSchema, validateArtifactContent } from "../../../core/src/artifacts";
 
 export interface StepExecutionContext {
   run: Run;
@@ -39,6 +39,7 @@ export class Executor {
   private readonly registry: AdapterRegistry;
   private readonly logger: Logger;
   private readonly docs?: DocsService;
+  private readonly parserRepairMode: "store_untrusted" | "off";
 
   constructor(
     artifactsDir: string,
@@ -46,7 +47,8 @@ export class Executor {
     evidenceRepo: EvidenceRepo,
     registry: AdapterRegistry,
     logger: Logger,
-    docs?: DocsService
+    docs?: DocsService,
+    parserRepairMode: "store_untrusted" | "off" = "store_untrusted"
   ) {
     this.artifactsDir = artifactsDir;
     this.artifactsRepo = artifactsRepo;
@@ -54,6 +56,7 @@ export class Executor {
     this.registry = registry;
     this.logger = logger;
     this.docs = docs;
+    this.parserRepairMode = parserRepairMode;
   }
 
   async executeStep(context: StepExecutionContext): Promise<StepExecutionResult> {
@@ -122,6 +125,11 @@ export class Executor {
     const persistedArtifacts: Artifact[] = [];
     const adapterArtifacts: AdapterArtifact[] = [];
     const validationErrors: string[] = [];
+    const validationIssues: Array<{
+      artifact: Artifact;
+      errors: string[];
+      raw_path?: string;
+    }> = [];
 
     for (const [index, output] of result.artifacts.entries()) {
       const stored = this.persistArtifact(context, output, runDir, index);
@@ -133,18 +141,38 @@ export class Executor {
       });
       context.emitArtifact(stored, context.step.id);
 
+      const schema = getArtifactSchema(output.type);
       if (output.content_json !== undefined) {
         const validationResult = validateArtifactContent(output.type, output.content_json);
         if (!validationResult.ok) {
-          validationErrors.push(
-            `${output.type}: ${validationResult.errors.join("; ")}`
-          );
+          const errors = validationResult.errors.map((error) => `${output.type}: ${error}`);
+          validationErrors.push(...errors);
+          validationIssues.push({ artifact: stored, errors });
         }
         this.persistEvidenceFromArtifact(context, output.content_json, stored);
+      } else if (schema) {
+        const parsed = this.tryParseJson(stored.path);
+        if (!parsed.ok) {
+          const errors = [`${output.type}: ${parsed.error}`];
+          validationErrors.push(...errors);
+          validationIssues.push({ artifact: stored, errors, raw_path: stored.path });
+        } else {
+          const validationResult = validateArtifactContent(output.type, parsed.value);
+          if (!validationResult.ok) {
+            const errors = validationResult.errors.map((error) => `${output.type}: ${error}`);
+            validationErrors.push(...errors);
+            validationIssues.push({ artifact: stored, errors, raw_path: stored.path });
+          }
+        }
       }
     }
 
     if (validationErrors.length > 0) {
+      if (this.parserRepairMode === "store_untrusted") {
+        for (const issue of validationIssues) {
+          this.markArtifactUntrusted(context, issue.artifact, issue.errors, issue.raw_path);
+        }
+      }
       throw new ValidationError(validationErrors.join("; "));
     }
 
@@ -201,7 +229,61 @@ export class Executor {
       hash,
       path: resolvedPath,
       media_type: mediaType ?? guessMediaType(resolvedPath),
-      size_bytes: sizeBytes
+      size_bytes: sizeBytes,
+      trust_state: "trusted"
+    });
+  }
+
+  private tryParseJson(filePath: string): { ok: true; value: unknown } | { ok: false; error: string } {
+    try {
+      const raw = fs.readFileSync(filePath, "utf8");
+      return { ok: true, value: JSON.parse(raw) as unknown };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to parse JSON output";
+      return { ok: false, error: message };
+    }
+  }
+
+  private markArtifactUntrusted(
+    context: StepExecutionContext,
+    artifact: Artifact,
+    errors: string[],
+    rawPath?: string
+  ): void {
+    const updated = this.artifactsRepo.updateTrustState({
+      id: artifact.id,
+      trust_state: "untrusted"
+    });
+
+    const evidenceDir = resolveEvidenceDir(
+      context.project_root,
+      this.artifactsDir,
+      context.run.id,
+      context.step.id
+    );
+    fs.mkdirSync(evidenceDir, { recursive: true });
+    const fileName = `parser-error-${artifact.id}.json`;
+    const evidencePath = path.join(evidenceDir, fileName);
+    const payload = {
+      artifact_id: artifact.id,
+      errors,
+      raw_path: rawPath
+    };
+    fs.writeFileSync(evidencePath, JSON.stringify(payload, null, 2), "utf8");
+    const buffer = fs.readFileSync(evidencePath);
+
+    this.evidenceRepo.create({
+      project_id: context.project_id,
+      run_id: context.run.id,
+      step_id: context.step.id,
+      chat_id: context.chat_id,
+      artifact_id: updated?.id ?? artifact.id,
+      kind: "parser_error",
+      path: evidencePath,
+      description: errors.join("; "),
+      hash: createHash("sha256").update(buffer).digest("hex"),
+      media_type: "application/json",
+      size_bytes: buffer.byteLength
     });
   }
 

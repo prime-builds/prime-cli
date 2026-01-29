@@ -80,6 +80,7 @@ export interface Artifact {
   path: string;
   media_type?: string;
   size_bytes?: number;
+  trust_state?: "trusted" | "untrusted";
   created_at: ISODateTime;
 }
 

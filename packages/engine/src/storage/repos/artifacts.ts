@@ -14,6 +14,7 @@ type ArtifactRow = {
   path: string;
   media_type: string | null;
   size_bytes: number | null;
+  trust_state: string | null;
   created_at: string;
 };
 
@@ -34,12 +35,13 @@ export class ArtifactsRepo {
     path: string;
     media_type?: string;
     size_bytes?: number;
+    trust_state?: "trusted" | "untrusted";
   }): Artifact {
     const id = newId();
     const createdAt = nowIso();
     this.db
       .prepare(
-        "INSERT INTO artifacts (id, project_id, run_id, step_id, chat_id, name, hash, path, media_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO artifacts (id, project_id, run_id, step_id, chat_id, name, hash, path, media_type, size_bytes, trust_state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .run(
         id,
@@ -52,6 +54,7 @@ export class ArtifactsRepo {
         input.path,
         input.media_type ?? null,
         input.size_bytes ?? null,
+        input.trust_state ?? "trusted",
         createdAt
       );
     return {
@@ -65,6 +68,7 @@ export class ArtifactsRepo {
       path: input.path,
       media_type: input.media_type,
       size_bytes: input.size_bytes,
+      trust_state: input.trust_state ?? "trusted",
       created_at: createdAt
     };
   }
@@ -100,10 +104,22 @@ export class ArtifactsRepo {
     return row ? this.toArtifact(row) : null;
   }
 
-  updateContent(input: { id: string; hash: string; size_bytes: number }): Artifact | null {
+  updateContent(input: {
+    id: string;
+    hash: string;
+    size_bytes: number;
+    trust_state?: "trusted" | "untrusted";
+  }): Artifact | null {
     this.db
-      .prepare("UPDATE artifacts SET hash = ?, size_bytes = ? WHERE id = ?")
-      .run(input.hash, input.size_bytes, input.id);
+      .prepare("UPDATE artifacts SET hash = ?, size_bytes = ?, trust_state = COALESCE(?, trust_state) WHERE id = ?")
+      .run(input.hash, input.size_bytes, input.trust_state ?? null, input.id);
+    return this.getById(input.id);
+  }
+
+  updateTrustState(input: { id: string; trust_state: "trusted" | "untrusted" }): Artifact | null {
+    this.db
+      .prepare("UPDATE artifacts SET trust_state = ? WHERE id = ?")
+      .run(input.trust_state, input.id);
     return this.getById(input.id);
   }
 
@@ -119,6 +135,7 @@ export class ArtifactsRepo {
       path: row.path,
       media_type: row.media_type ?? undefined,
       size_bytes: row.size_bytes ?? undefined,
+      trust_state: row.trust_state ?? undefined,
       created_at: row.created_at
     };
   }

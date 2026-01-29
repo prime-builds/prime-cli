@@ -54,7 +54,7 @@ import type {
   RunStartResponse
 } from "../../shared/src/contracts";
 import type { AdapterArtifact } from "../../core/src/adapters";
-import { listArtifactSchemas } from "../../core/src/artifacts";
+import { listArtifactSchemas, validateArtifactContent } from "../../core/src/artifacts";
 import {
   EmptyAdapterRegistry,
   FileSystemAdapterRegistry,
@@ -147,7 +147,8 @@ export class Engine {
       this.repos.evidence,
       this.registry,
       this.logger,
-      this.docs
+      this.docs,
+      this.config.parserRepairMode ?? "store_untrusted"
     );
     this.runManager = new RunManager(this.repos, executor, this.events, this.logger);
   }
@@ -461,10 +462,12 @@ export class Engine {
 
     const buffer = fs.readFileSync(artifact.path);
     const hash = this.hashContent(buffer);
+    const trustState = resolveArtifactTrustState(artifact.path);
     const updated = repos.artifacts.updateContent({
       id: artifact.id,
       hash,
-      size_bytes: buffer.byteLength
+      size_bytes: buffer.byteLength,
+      trust_state: trustState
     });
     if (!updated) {
       throw new NotFoundError("Artifact not found");
@@ -637,6 +640,24 @@ function inferArtifactType(filePath: string, knownTypes: string[]): string | nul
     }
   }
   return null;
+}
+
+function resolveArtifactTrustState(filePath: string): "trusted" | "untrusted" | undefined {
+  const knownTypes = Object.keys(listArtifactSchemas()).sort(
+    (a, b) => b.length - a.length
+  );
+  const inferred = inferArtifactType(filePath, knownTypes);
+  if (!inferred) {
+    return undefined;
+  }
+  try {
+    const raw = fs.readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw) as unknown;
+    const validation = validateArtifactContent(inferred, parsed);
+    return validation.ok ? "trusted" : "untrusted";
+  } catch {
+    return "untrusted";
+  }
 }
 
 function buildInitialArtifactsFromParent(
