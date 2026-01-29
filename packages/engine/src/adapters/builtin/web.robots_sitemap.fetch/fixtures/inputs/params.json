@@ -1,0 +1,5 @@
+{
+  "target_url": "{{fixture_server_url}}",
+  "timeout_sec": 3,
+  "follow_redirects": true
+}
