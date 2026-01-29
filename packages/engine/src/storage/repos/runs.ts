@@ -64,7 +64,7 @@ export class RunsRepo {
          planner_provider_id, planner_model_name,
          planner_prompt_version, critic_prompt_version, planner_latency_ms,
          planner_tokens_in, planner_tokens_out, tokens_estimate)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
