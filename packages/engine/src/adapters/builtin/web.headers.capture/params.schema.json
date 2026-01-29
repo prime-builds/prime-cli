@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target_url"],
+  "properties": {
+    "target_url": { "type": "string" },
+    "timeout_sec": { "type": "integer", "minimum": 1, "default": 10 },
+    "user_agent": { "type": "string" },
+    "follow_redirects": { "type": "boolean", "default": true }
+  }
+}

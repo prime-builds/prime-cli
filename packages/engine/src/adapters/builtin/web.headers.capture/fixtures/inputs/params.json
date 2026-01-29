@@ -1,0 +1,5 @@
+{
+  "target_url": "http://127.0.0.1:9",
+  "timeout_sec": 1,
+  "follow_redirects": false
+}

@@ -1,0 +1,16 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "source_artifacts": ["findings_candidates.json"],
+  "triaged": [
+    {
+      "candidate_id": "cand_001",
+      "decision": "keep",
+      "severity": "medium",
+      "rationale": "Decision keep based on severity_hint medium and confidence medium.",
+      "tags": ["headers"],
+      "refs": []
+    }
+  ],
+  "summary": { "kept": 1, "dropped": 0, "needs_review": 0 }
+}

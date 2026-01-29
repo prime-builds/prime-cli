@@ -1,0 +1,11 @@
+{
+  "target": "https://example.com",
+  "timestamp": "2025-01-01T00:00:00Z",
+  "urls": [
+    { "url": "https://example.com/", "source": "seed" },
+    { "url": "https://example.com/about", "source": "anchor" }
+  ],
+  "links": [
+    { "url": "https://example.com/contact", "source": "anchor" }
+  ]
+}

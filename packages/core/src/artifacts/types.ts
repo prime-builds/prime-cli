@@ -34,6 +34,52 @@ export interface WebSurfaceArtifact {
   evidence?: WebSurfaceEvidence[];
 }
 
+export interface WebHeaderEntry {
+  name: string;
+  value: string;
+  source?: string;
+  url?: string;
+}
+
+export interface WebHeadersArtifact {
+  target: string;
+  timestamp: string;
+  headers: WebHeaderEntry[];
+  evidence?: WebSurfaceEvidence[];
+  notes?: string[];
+}
+
+export interface RobotsSitemapArtifact {
+  target: string;
+  timestamp: string;
+  robots_url?: string;
+  sitemap_urls?: string[];
+  discovered_urls?: string[];
+  notes?: string[];
+  evidence?: WebSurfaceEvidence[];
+}
+
+export interface LinkGraphNode {
+  url: string;
+}
+
+export interface LinkGraphEdge {
+  from: string;
+  to: string;
+  source?: string;
+}
+
+export interface LinkGraphArtifact {
+  target: string;
+  timestamp: string;
+  nodes: LinkGraphNode[];
+  edges: LinkGraphEdge[];
+  stats?: {
+    node_count?: number;
+    edge_count?: number;
+  };
+}
+
 export type FindingEvidence = {
   kind: "url" | "header" | "html" | "text";
   value: string;
@@ -92,6 +138,14 @@ export type ReportArtifact = {
   timestamp: string;
   artifacts: string[];
   report_path: string;
+};
+
+export type ReportExportArtifact = {
+  target: string;
+  timestamp: string;
+  artifacts: string[];
+  report_path: string;
+  export_path: string;
 };
 
 export type ArtifactSchemas = Record<string, JSONSchema>;
